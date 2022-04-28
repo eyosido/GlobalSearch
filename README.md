@@ -64,7 +64,7 @@ The search field is a popup containing a persistent history of searches, which m
 Search results are presented in a Tree view by default, where the result hierarchy may be expanded/collapsed locally. This may be changed to List view by clicking the List icon. The search result view has several columns, you may increase the width of the view if they are not visible by default. Right-clicking on a search result enables to copy into the clipboard various information as well as start a new search from a found result (for example a function name). Search results may be cleared using the Clear button (red X icon). A text at the bottom of the view indicates how many results have been found, or whether no results have been found.
 
 # Package Download
-Ready-to-use packages are available in the [releases folder](https://github.com/eyosido/GlobalSearch/tree/main/releases).
+Ready-to-use packages are available in the [Releases section](https://github.com/eyosido/GlobalSearch/releases).
 
 # Documentation
 Documentation comprises this file as well as content of the [doc folder](https://github.com/eyosido/GlobalSearch/tree/main/doc).
