@@ -79,3 +79,6 @@ As of version 1.2.2:
 
 # Build
 To build the .sdplugin file from source, please follow the [procedure](https://substance3d.adobe.com/documentation/sddoc/packaging-plugins-182257149.html) mentioned in the Substance 3D Designer documentation.
+
+# Support
+For support you may join the [Eyosido Soft. Discord server](https://discord.gg/BpUgtTRUdT).
