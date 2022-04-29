@@ -71,10 +71,11 @@ Documentation comprises this file as well as content of the [doc folder](https:/
 
 # Known issues / limitations
 As of version 1.2.2:
-- tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
-- the outcome of a search cannot be opnened inside a Designer view.
-- frame titles are not currently searchable.
-- the content of functions attached to FX-Map's internal graph nodes is not searchable.
+- Supports only Substance Graphs (texturing graphs).
+- Tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
+- The outcome of a search cannot be opnened inside a Designer view.
+- Frame titles are not currently searchable.
+- The content of functions attached to FX-Map's internal graph nodes is not searchable.
 
 # Build
 To build the .sdplugin file from source, please follow the [procedure](https://substance3d.adobe.com/documentation/sddoc/packaging-plugins-182257149.html) mentioned in the Substance 3D Designer documentation.
