@@ -14,20 +14,20 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
 - Searches text or presets into multiple packages/folders/graphs/functions from a user-defined search root. The list of possible search roots can be refreshed if items have been added/removed in the Explorer view.
 
 - Persistent search filters enabling to search into the following fields:
-  . graph name (ID or label)
-	. Folder name (ID)
-	. Comments and frames
-	. Package function names (ID or label)
-	. Package function input parameter names (ID)
-	. Variables or input parameters in function Get nodes (including Package function)
-	. Variables or input parameters in function Set nodes (including Package function)
+  - graph name (ID or label)
+  - Folder name (ID)
+  - Comments and frames
+  - Package function names (ID or label)
+  - Package function input parameter names (ID)
+  - Variables or input parameters in function Get nodes (including Package function)
+  - Variables or input parameters in function Set nodes (including Package function)
 	
   These search capabilities, in particular the ability to find variable Get/Set usage into package functions are especially useful when developing function code as cooking errors currently do not identify the package function in which an error is present. If the error is related to a variable, the search tool enables to quickly find it.
 
 - Search presets override search filters and search for specific information. The following presets are available:
-    . Param functions: searches all graph input parameters to which are assigned custom parameter functions. In a large graph, it is easy to loose track of the input parameters having custom functions, this preset lets you identify them.
-	. TODO: searches for TODO strings that can be left in comments to indicate a feature left to implement. This way you can easily manage a TODO list of what's left to do in your graphs.
-	. TMP: searches for TMP strings that can be left in comments to indicate a temporary feature that needs to be removed before final release.
+  - Param functions: searches all graph input parameters to which are assigned custom parameter functions. In a large graph, it is easy to loose track of the input parameters having custom functions, this preset lets you identify them.
+  - TODO: searches for TODO strings that can be left in comments to indicate a feature left to implement. This way you can easily manage a TODO list of what's left to do in your graphs.
+  - TMP: searches for TMP strings that can be left in comments to indicate a temporary feature that needs to be removed before final release.
 
 - Two search modes: Natural searches for text contained into the items determined by search filters. If not using Natural mode, search is made for exact match, in this case the * wildcard character may be used at the beginning or end of the search text find items by prefix or suffix. Search can be made case sensitive or not.
 
