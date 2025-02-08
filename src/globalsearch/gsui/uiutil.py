@@ -4,11 +4,17 @@
 # ---------------
 
 import os
-from PySide2.QtUiTools import QUiLoader
-from PySide2 import QtGui, QtWidgets
-from PySide2.QtCore import Qt
 
 import sd
+if sd.getContext().getSDApplication().getVersion() < "14.0.0":
+    from PySide2.QtUiTools import QUiLoader
+    from PySide2 import QtGui, QtWidgets
+    from PySide2.QtCore import Qt
+else:
+    from PySide6.QtUiTools import QUiLoader
+    from PySide6 import QtGui, QtWidgets
+    from PySide6.QtCore import Qt
+    
 from globalsearch.gscore.sdobj import SDObj 
 
 class GSUIUtil:

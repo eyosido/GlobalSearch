@@ -6,13 +6,18 @@
 from pathlib import Path
 
 import sd
+if sd.getContext().getSDApplication().getVersion() < "14.0.0":
+    from PySide2 import QtWidgets
+    from PySide2.QtCore import Signal
+    from PySide2.QtWidgets import QTreeWidgetItemIterator, QSizePolicy
+else:
+    from PySide6 import QtWidgets
+    from PySide6.QtCore import Signal
+    from PySide6.QtWidgets import QTreeWidgetItemIterator, QSizePolicy
+
 from sd.api.sdpackage import SDPackage
 from sd.api.sdgraph import SDGraph
 from sd.api.sdresourcefolder import SDResourceFolder
-
-from PySide2 import QtWidgets
-from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QTreeWidgetItemIterator, QSizePolicy
 
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gsui.uiutil import GSUIUtil

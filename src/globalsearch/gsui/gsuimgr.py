@@ -5,13 +5,19 @@
 
 from enum import Enum
 import os
-from PySide2 import QtCore, QtWidgets, QtGui
-from PySide2.QtCore import QObject, Signal, Slot, QModelIndex, Qt, QEvent, QTimer
-from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import QVBoxLayout, QWidget, QSlider, QLabel, QTreeWidget, \
-QComboBox, QLineEdit, QTreeWidgetItemIterator, QSizePolicy
 
 import sd
+if sd.getContext().getSDApplication().getVersion() < "14.0.0":
+    from PySide2 import QtCore, QtWidgets, QtGui
+    from PySide2.QtCore import QObject, Signal, Slot, QModelIndex, Qt, QEvent, QTimer
+    from PySide2.QtUiTools import QUiLoader
+    from PySide2.QtWidgets import QVBoxLayout, QWidget, QSlider, QLabel, QTreeWidget, QComboBox, QLineEdit, QTreeWidgetItemIterator, QSizePolicy
+else:
+    from PySide6 import QtCore, QtWidgets, QtGui
+    from PySide6.QtCore import QObject, Signal, Slot, QModelIndex, Qt, QEvent, QTimer
+    from PySide6.QtUiTools import QUiLoader
+    from PySide6.QtWidgets import QVBoxLayout, QWidget, QSlider, QLabel, QTreeWidget, QComboBox, QLineEdit, QTreeWidgetItemIterator, QSizePolicy
+
 from sd.api.sdpackagemgr import SDPackageMgr
 from sd.api.sdarray import SDArray
 from sd.api.sdgraph import SDGraph

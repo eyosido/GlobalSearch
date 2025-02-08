@@ -35,7 +35,7 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.2.2"
+    VERSION = "1.2.3"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx

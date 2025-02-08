@@ -3,10 +3,17 @@
 # (c) 2019-2022 Eyosido Software SARL
 # ---------------
 
-from PySide2 import QtWidgets
-from PySide2.QtGui import QGuiApplication
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMenu, QAction
+import sd
+if sd.getContext().getSDApplication().getVersion() < "14.0.0":
+    from PySide2 import QtWidgets
+    from PySide2.QtGui import QGuiApplication
+    from PySide2.QtCore import Qt
+    from PySide2.QtWidgets import QMenu, QAction
+else:
+    from PySide6 import QtWidgets
+    from PySide6.QtGui import QGuiApplication, QAction
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMenu
 
 from sd.api.sdnode import SDNode
 

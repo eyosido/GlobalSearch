@@ -3,8 +3,14 @@
 # (c) 2019-2022 Eyosido Software SARL
 # ---------------
 
-from PySide2 import QtCore, QtWidgets
-from PySide2.QtCore import Qt
+import sd
+if sd.getContext().getSDApplication().getVersion() < "14.0.0":
+    from PySide2 import QtCore, QtWidgets
+    from PySide2.QtCore import Qt
+else:
+    from PySide6 import QtCore, QtWidgets
+    from PySide6.QtCore import Qt
+
 from globalsearch.gsui.uiutil import GSUIUtil
 
 class GSUIPrefsDlg(QtWidgets.QDialog):
@@ -31,31 +37,31 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.gb_search_criteria.setGeometry(QtCore.QRect(10, 10, 411, 201))
         self.gb_search_criteria.setObjectName("gb_search_criteria")
         self.chk_graph_name = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_graph_name.setGeometry(QtCore.QRect(10, 30, 111, 17))
+        self.chk_graph_name.setGeometry(QtCore.QRect(10, 30, 111, 23))
         self.chk_graph_name.setObjectName("chk_graph_name")
         self.chk_folder_name = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_folder_name.setGeometry(QtCore.QRect(10, 57, 111, 17))
+        self.chk_folder_name.setGeometry(QtCore.QRect(10, 57, 111, 23))
         self.chk_folder_name.setObjectName("chk_folder_name")
         self.chk_comment = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_comment.setGeometry(QtCore.QRect(10, 84, 151, 17))
+        self.chk_comment.setGeometry(QtCore.QRect(10, 84, 151, 23))
         self.chk_comment.setObjectName("chk_comment")
         self.chk_function = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_function.setGeometry(QtCore.QRect(200, 30, 70, 17))
+        self.chk_function.setGeometry(QtCore.QRect(200, 30, 70, 23))
         self.chk_function.setObjectName("chk_function")
         self.chk_func_name = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_func_name.setGeometry(QtCore.QRect(220, 57, 111, 17))
+        self.chk_func_name.setGeometry(QtCore.QRect(220, 57, 111, 23))
         self.chk_func_name.setObjectName("chk_func_name")
         self.chk_func_input_param = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_func_input_param.setGeometry(QtCore.QRect(220, 84, 111, 17))
+        self.chk_func_input_param.setGeometry(QtCore.QRect(220, 84, 111, 23))
         self.chk_func_input_param.setObjectName("chk_func_input_param")
         self.chk_func_getter = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_func_getter.setGeometry(QtCore.QRect(220, 111, 111, 17))
+        self.chk_func_getter.setGeometry(QtCore.QRect(220, 111, 111, 23))
         self.chk_func_getter.setObjectName("chk_func_getter")
         self.chk_func_setter = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_func_setter.setGeometry(QtCore.QRect(220, 138, 101, 17))
+        self.chk_func_setter.setGeometry(QtCore.QRect(220, 138, 101, 23))
         self.chk_func_setter.setObjectName("chk_func_setter")
         self.chk_graphParamFunc = QtWidgets.QCheckBox(self.gb_search_criteria)
-        self.chk_graphParamFunc.setGeometry(QtCore.QRect(220, 165, 171, 17))
+        self.chk_graphParamFunc.setGeometry(QtCore.QRect(220, 165, 171, 23))
         self.chk_graphParamFunc.setObjectName("chk_graphParamFunc")
         self.l_about = QtWidgets.QLabel(self)
         self.l_about.setGeometry(QtCore.QRect(10, 455, 141, 20))
@@ -65,25 +71,25 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.gb_search_process.setGeometry(QtCore.QRect(10, 320, 411, 121))
         self.gb_search_process.setObjectName("gb_search_process")
         self.chk_natural_search = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_natural_search.setGeometry(QtCore.QRect(10, 30, 141, 17))
+        self.chk_natural_search.setGeometry(QtCore.QRect(10, 30, 141, 23))
         self.chk_natural_search.setObjectName("chk_natural_search")
         self.chk_case_sensitive = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_case_sensitive.setGeometry(QtCore.QRect(10, 57, 151, 17))
+        self.chk_case_sensitive.setGeometry(QtCore.QRect(10, 57, 151, 23))
         self.chk_case_sensitive.setObjectName("chk_case_sensitive")
         self.chk_enter_pkg_func = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_enter_pkg_func.setGeometry(QtCore.QRect(220, 57, 181, 17))
+        self.chk_enter_pkg_func.setGeometry(QtCore.QRect(220, 57, 181, 23))
         self.chk_enter_pkg_func.setObjectName("chk_enter_pkg_func")
         self.chk_enter_subgraphs = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_enter_subgraphs.setGeometry(QtCore.QRect(220, 30, 181, 17))
+        self.chk_enter_subgraphs.setGeometry(QtCore.QRect(220, 30, 181, 23))
         self.chk_enter_subgraphs.setObjectName("chk_enter_subgraphs")
         self.chk_disp_node_ids = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_disp_node_ids.setGeometry(QtCore.QRect(10, 84, 141, 17))
+        self.chk_disp_node_ids.setGeometry(QtCore.QRect(10, 84, 141, 23))
         self.chk_disp_node_ids.setObjectName("chk_disp_node_ids")
         self.gb_search_history = QtWidgets.QGroupBox(self)
         self.gb_search_history.setGeometry(QtCore.QRect(10, 230, 411, 71))
         self.gb_search_history.setObjectName("gb_search_history")
         self.chk_sh_enable = QtWidgets.QCheckBox(self.gb_search_history)
-        self.chk_sh_enable.setGeometry(QtCore.QRect(10, 30, 181, 17))
+        self.chk_sh_enable.setGeometry(QtCore.QRect(10, 30, 181, 23))
         self.chk_sh_enable.setObjectName("chk_sh_enable")
         self.pb_sh_clear = QtWidgets.QPushButton(self.gb_search_history)
         self.pb_sh_clear.setGeometry(QtCore.QRect(220, 25, 171, 23))
