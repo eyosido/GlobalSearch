@@ -16,11 +16,27 @@ else:
     from PySide6.QtCore import Qt
     
 from globalsearch.gscore.sdobj import SDObj 
+from globalsearch.gscore.gslog import GSLogger
 
 class GSUIUtil:
     """
     General purpose UI and UI+SD related utilities
     """
+    TYPE_ICON_FILE = {
+        SDObj.PACKAGE: "gs_package.png",
+        SDObj.GRAPH: "gs_graph.png",
+        SDObj.FOLDER: "gs_folder.png",
+        SDObj.FUNCTION: "gs_function.png",
+        SDObj.COMMENT: "gs_comment.png",
+        SDObj.FRAME: "gs_frame.png",
+        SDObj.FNODE_GET: "gs_func_get.png",
+        SDObj.FNODE_SET: "gs_func_set.png",
+        SDObj.FUNC_INPUT: "gs_func_input.png",
+        SDObj.PARAM_INPUT: "gs_input.png",
+        SDObj.FUNC_CALL: "gs_func_call.png",
+        SDObj.FUNC_PARAM: "gs_func_param.png"
+    }
+
     @classmethod
     def loadUI(cls, uiFilename):
         curdir = os.path.dirname(__file__)
@@ -43,32 +59,11 @@ class GSUIUtil:
     def iconForSDObj(cls, nodeType, scaledHeight = -1):
         iconFilename = None
         icon = None
-        if nodeType == SDObj.PACKAGE:
-            iconFilename = "gs_package.png"
-        elif nodeType == SDObj.GRAPH:
-            iconFilename = "gs_graph.png"
-        elif nodeType == SDObj.FOLDER:
-            iconFilename = "gs_folder.png"
-        elif nodeType == SDObj.FUNCTION:
-            iconFilename = "gs_function.png"
-        elif nodeType == SDObj.COMMENT:
-            iconFilename = "gs_comment.png"
-        elif nodeType == SDObj.FRAME:
-            iconFilename = "gs_frame.png"
-        elif nodeType == SDObj.FNODE_GET:
-            iconFilename = "gs_func_get.png"
-        elif nodeType == SDObj.FNODE_SET:
-            iconFilename = "gs_func_set.png"
-        elif nodeType == SDObj.FUNC_INPUT:
-            iconFilename = "gs_func_input.png"
-        elif nodeType == SDObj.PARAM_INPUT:
-            iconFilename = "gs_input.png"
-        elif SDObj.isGraphNode(nodeType):
+
+        if SDObj.isGraphNode(nodeType):
             iconFilename = "gs_graph_node.png"
-        elif nodeType == SDObj.FUNC_CALL:
-            iconFilename = "gs_func_call.png"
-        elif nodeType == SDObj.FUNC_PARAM:
-            iconFilename = "gs_func_param.png"
+        else:
+            iconFilename = cls.TYPE_ICON_FILE.get(nodeType)
                        
         if iconFilename:
             icon = cls.iconWithFilename(iconFilename, scaledHeight)
@@ -126,3 +121,14 @@ class GSUIUtil:
         from globalsearch.gsui.gsuimgr import GSUIManager
         p = parent if parent else sd.getContext().getSDApplication().getQtForPythonUIMgr().getMainWindow()
         return QtWidgets.QMessageBox.question(p, GSUIManager.APPNAME, msg) == QtWidgets.QMessageBox.Yes
+    
+    @classmethod
+    def graphViewIDFromGraph(cls, graph):
+        uiMgr = sd.getContext().getSDApplication().getUIMgr()
+        count = uiMgr.getGraphViewIDCount()
+        for i in range(0, count):
+            graphViewID = uiMgr.getGraphViewIDAt(i)
+            g = uiMgr.getGraphFromGraphViewID(graphViewID)
+            if g.getIdentifier() == graph.getIdentifier():
+                return graphViewID
+        return None

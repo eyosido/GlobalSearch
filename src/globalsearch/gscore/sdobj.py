@@ -170,6 +170,11 @@ class SDObj:
         return type >= cls.FUNCTION_NODE and type < cls.FUNCTION_NODE_LAST
 
     @classmethod
+    # Node that can be present in Exporer view
+    def isExporerNode(cls, type):
+        return type == cls.FUNCTION or type == cls.FOLDER or type == cls.GRAPH
+
+    @classmethod
     def name(cls, sdObj, type):
         name = ""
         if type == cls.GRAPH_NODE:
@@ -199,4 +204,3 @@ class SDObj:
                     if not name or len(name) == 0:
                         name = graph.getIdentifier()
         return name
-

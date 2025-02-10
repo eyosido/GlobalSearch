@@ -101,6 +101,8 @@ class GSUIWidget(QWidget):
         self.ui.cb_search.setCompleter(None) # disable auto-completion as creates issue with Presets
 
         # set up icons
+        self.setupButtonIcon(self.ui.btn_prev_search, "gs_prev.png")
+        self.setupButtonIcon(self.ui.btn_next_search, "gs_next.png")
         self.setupButtonIcon(self.ui.btn_refresh, "gs_refresh.png")
         self.setupButtonIcon(self.ui.btn_search, "gs_search.png")
         self.setupButtonIcon(self.ui.btn_clear, "gs_clear.png")
@@ -119,14 +121,24 @@ class GSUIWidget(QWidget):
 
         self.searchResultTreeWidget = GSUISearchResultTreeWidget(self.ui)
         self.ui.vl_search_main.insertWidget(1, self.searchResultTreeWidget)
-
+        
         self.clearStatus()
+        self.onSearchTextChanged()
+
+    def enableNavButtons(self):
+        gslog.log("enableNavButtons")
+        self.ui.btn_prev_search.setEnabled(self.searchHistory.nav_has_prev())
+        self.ui.btn_next_search.setEnabled(self.searchHistory.nav_has_next())
 
     def connectSlots(self):
         # we use lambda functions as the slot is not is the same class as the signal
+        self.ui.btn_prev_search.clicked.connect(lambda:self.onPrevSearch())
+        self.ui.btn_next_search.clicked.connect(lambda:self.onNextSearch())
         self.ui.btn_refresh.clicked.connect(lambda:self.onRefresh())
         self.ui.btn_search.clicked.connect(lambda:self.onSearch())
-        self.ui.cb_search.lineEdit().returnPressed.connect(lambda:self.onSearch())
+        le = self.ui.cb_search.lineEdit()
+        le.returnPressed.connect(lambda:self.onSearch())
+        le.textChanged.connect(lambda:self.onSearchTextChanged())
         self.ui.cb_search.currentIndexChanged.connect(lambda:self.onCurrentIndexChangred())
         self.ui.btn_clear.clicked.connect(lambda:self.onClear())
         self.ui.btn_prefs.clicked.connect(lambda:self.onPrefs())
@@ -142,22 +154,42 @@ class GSUIWidget(QWidget):
             customTreeData = treeWidget.customDataFromTreeItem(treeItem)
         return customTreeData
 
-    def programmaticSearch(self, text):
+    def programmaticSearch(self, text, nav=False):
         self.ui.cb_search.lineEdit().setText(text)
-        self.onSearch()
+        self.getTextAndSearch(nav)
 
     # --- slots
+    def onPrevSearch(self):
+        if self.searchHistory.nav_has_prev():
+            self.programmaticSearch(self.searchHistory.nav_prev(), nav=True)
+            self.enableNavButtons()
+
+    def onNextSearch(self):
+        if self.searchHistory.nav_has_next():
+            self.programmaticSearch(self.searchHistory.nav_next(), nav=True)
+            self.enableNavButtons()
+    
     def onRefresh(self):
+        gslog.log("onRefresh")
         self.searchRootWidget.reload()
 
     def onSearch(self):
+        self.getTextAndSearch(nav=False)
+
+    def getTextAndSearch(self, nav=False):
         searchStr = self.ui.cb_search.currentText()
         if searchStr and len(searchStr) > 0:
             customTreeData = self.getCurrentSearchRoot()
             if customTreeData:
-                self.performSearch(searchStr, customTreeData.sdObj, self.curSearchPreset)
+                self.performSearch(searchStr, customTreeData.sdObj, nav, self.curSearchPreset)
             else:
                 gslog.log("No search root item found")
+
+    def onSearchTextChanged(self):
+        searchStr = self.ui.cb_search.currentText()
+        hasText = searchStr is not None and len(searchStr) > 0
+        self.ui.btn_search.setEnabled(hasText)
+        self.ui.btn_clear.setEnabled(hasText)
 
     def onClear(self):
         self.ui.cb_search.lineEdit().clear()
@@ -174,11 +206,12 @@ class GSUIWidget(QWidget):
         self.searchResultTreeWidget.setDisplayMode(GSUISearchResultTreeWidget.DM_LIST if checked else GSUISearchResultTreeWidget.DM_TREE)
 
      # --- processings
-    def performSearch(self, searchStr, searchRoot, preset = SP_NONE):
+    # nav: True if search is issued by a navitation prev/next action
+    def performSearch(self, searchStr, searchRoot, nav=False, preset = SP_NONE):
         self.setStatusSearching()
-        QTimer.singleShot(1, lambda:self.doPerformSearch(searchStr, searchRoot, preset))
+        QTimer.singleShot(1, lambda:self.doPerformSearch(searchStr, searchRoot, nav, preset))
 
-    def doPerformSearch(self, searchStr, searchRoot, preset = SP_NONE):
+    def doPerformSearch(self, searchStr, searchRoot, nav=False, preset = SP_NONE):
         searchCriteria = GSUIManager.prefs.toSearchCriteria()
         searchCriteria.searchString = searchStr
 
@@ -199,6 +232,10 @@ class GSUIWidget(QWidget):
         
         if self.searchHistory and searchResults.hasSearchResults() and preset == self.__class__.SP_NONE:
             self.searchHistory.push(searchStr)
+            if not nav:
+                # search does not come from a navigation prev/next action so append it to nav list
+                self.searchHistory.nav_append(searchStr)
+                self.enableNavButtons()
 
         if searchResults.hasSearchResults():
             self.setStatusResultFound(searchResults.getFoundCount())
@@ -235,6 +272,8 @@ class GSUIWidget(QWidget):
         self.insertSearchHistory(self.searchHistorySeparatorIndex + 1, "Param functions", self.__class__.SP_PARAM_CUSTOM_FUNC)
         self.insertSearchHistory(self.searchHistorySeparatorIndex + 2, "TODO", self.__class__.SP_TODO)
         self.insertSearchHistory(self.searchHistorySeparatorIndex + 3, "TMP", self.__class__.SP_TMP)
+
+        self.enableNavButtons()
 
     def disableSearchHistory(self):
         if self.searchHistory:

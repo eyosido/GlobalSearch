@@ -16,13 +16,12 @@ else:
     from PySide6.QtWidgets import QMenu
 
 from sd.api.sdnode import SDNode
-
+from sd.api.apiexception import APIException
 from globalsearch.gsui.uiutil import GSUIUtil
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore.searchdata import SearchResultPathNode
 from globalsearch.gsui.prefs import GSUIPref
-
-from sd.api.sdnode import SDNode
+from globalsearch.gscore import gslog
 
 class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
     """
@@ -57,19 +56,23 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         self.bufferedLocation = None
         self.bufferedFound = None
         self.bufferedId = None
+        self.bufferedPathNode = None
+        self.bufferedSDNode = None
+        self.bufferedGraphViewID = None
+        self.bufferedParentGraph = None
 
     def onContextMenu(self, pos):
         treeItem = self.itemAt(pos)
         menu = QMenu(self)
         self.resetContextMenuBuffers()
         pathNode = treeItem.data(0, Qt.UserRole)
+        self.bufferedPathNode = pathNode
 
         # --- gather text items
 
         # Location column
         if self.displayMode == self.__class__.DM_TREE:
             useLocation = True
-
             if pathNode.subType == SDObj.FUNC_CALL:
                 useLocation = False
             elif isinstance(pathNode.sdObj, SDNode):
@@ -102,11 +105,40 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
             if action:
                 action.triggered.connect(self.onCMCopyFound)
 
-        # Copy Node Id
+        # Copy /Jump To Node Id
         if self.bufferedId:
             action = self.createContextMenuItemForTextAtColumn(menu, actionStr, self.bufferedId)
             if action:
                 action.triggered.connect(self.onCMCopyId)
+
+        menu.addSection("Navigation")
+        # --- Jump to node
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if self.bufferedPathNode:
+                sd_node = None
+                if self.bufferedPathNode.contextNode and isinstance(self.bufferedPathNode.contextNode, SDNode):
+                    sd_node = self.bufferedPathNode.contextNode # for comments
+                elif self.bufferedPathNode.sdObj and isinstance(self.bufferedPathNode.sdObj, SDNode):
+                    sd_node = self.bufferedPathNode.sdObj
+                
+                if sd_node:
+                    self.bufferedSDNode = sd_node
+                    parentGraphPN = self.bufferedPathNode.getParentGraphPathNode()
+                    if parentGraphPN:
+                        self.bufferedParentGraph = parentGraphPN.sdObj
+
+                        action = QAction("Show in Graph View", self)
+                        action.triggered.connect(self.onCMJumpToNode)
+                        menu.addAction(action)
+
+        # --- Show in Exporer
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if self.bufferedPathNode:
+                if SDObj.isExporerNode(self.bufferedPathNode.subType):
+                    self.bufferedSDNode = self.bufferedPathNode.sdObj
+                    action = QAction("Show in Explorer", self)
+                    action.triggered.connect(self.onCMShowInExplorer)
+                    menu.addAction(action)
 
         # --- Search actions
         menu.addSection("Search")
@@ -145,6 +177,29 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
     def onCMCopyId(self, checked):
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(self.bufferedId)
+
+    def onCMJumpToNode(self, checked):
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if self.bufferedSDNode and self.bufferedParentGraph:
+                try:
+                    uiMgr = sd.getContext().getSDApplication().getUIMgr()
+                    uiMgr.openResourceInEditor(self.bufferedParentGraph)
+                    graphViewID = GSUIUtil.graphViewIDFromGraph(self.bufferedParentGraph)
+                    if graphViewID:
+                        uiMgr.focusGraphNode(graphViewID, self.bufferedSDNode)
+                    else:
+                       gslog.log("Cannot find open graph for node " + str(self.bufferedSDNode))
+                except APIException as e:
+                    gslog.log("Error focusing on node " + str(self.bufferedSDNode) + " in graph " + str(self.bufferedParentGraph) + ": " + str(e))
+
+    def onCMShowInExplorer(self, checked):
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if self.bufferedSDNode:
+                try:
+                    uiMgr = sd.getContext().getSDApplication().getUIMgr()
+                    uiMgr.setExplorerSelection(self.bufferedSDNode)
+                except APIException as e:
+                    gslog.log("Error selecting node in Explorer " + str(self.bufferedSDNode) + ": " + str(e))
 
     def onCMSearchLocation(self, checked):
         from globalsearch.gsui.gsuimgr import GSUIManager

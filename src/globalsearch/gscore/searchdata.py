@@ -3,8 +3,10 @@
 # (c) 2019-2022 Eyosido Software SARL
 # ---------------
 
+from sd.api.sdgraph import SDGraph
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore import gslog
+from globalsearch.gscore.gslog import GSLogger
 
 class SearchCriteria:
     """
@@ -68,6 +70,15 @@ class SearchResultPathNode:
 
     def isLeaf(self):
         return len(self.children) == 0
+    
+    def getParentGraphPathNode(self):
+        p = self.parent
+        while p:
+            if p.sdObj and isinstance(p.sdObj, SDGraph):
+                return p
+            else:
+                p = p.parent
+        return None
 
     def consolidatedName(self):
         type,_ = self.consolidatedType()
@@ -143,7 +154,7 @@ class SearchResults:
     def setFoundMatchForCurrentPathNode(self, foundMatch):        
         self.currentPathNode.foundMatch = foundMatch
         self.incrementFoundCount()
-    
+
     # --- debug
     def logTreeStr(self, pathNode):
         gslog.log(pathNode.__str__())

@@ -35,7 +35,7 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.2.3"
+    VERSION = "1.3"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx
@@ -91,7 +91,7 @@ class GlobalSearch:
         if packages:
             for p in range(0, packages.getSize()):
                 package = packages.getItem(p)
-                if self.searchInto(package):
+                if self.searchInto(package, subType=SDObj.PACKAGE):
                     foundSearchResult = True
         return foundSearchResult
 
@@ -101,7 +101,8 @@ class GlobalSearch:
         if resources:
             for r in range(0, resources.getSize()):
                 resource = resources.getItem(r)
-                if self.isContainerNode(resource) and self.searchInto(resource):
+                subType, _ = SDObj.type(resource)
+                if self.isContainerNode(resource) and self.searchInto(resource, subType=subType):
                     foundSearchResult = True
 
         return foundSearchResult
@@ -144,10 +145,11 @@ class GlobalSearch:
                             # a function graph is controlling this property
                             paramName = prop.getLabel()
                             if self.searchCriteria.ss_param_func:
-                                pathNode = self.searchResults.appendPathNode(propGraph, "", True, False)
+                                pathNode = self.searchResults.appendPathNode(propGraph, "", isFoundMatch=True, assignToCurrent=False)
                                 pathNode.contextNode = node
                                 pathNode.subType = SDObj.FUNC_PARAM
                                 pathNode.name = paramName
+                                pathNode.graph = graph
                                 foundSearchResult_lev2 = True
                             else:
                                  if self.searchInto(propGraph, SDObj.FUNC_PARAM, paramName):
@@ -210,13 +212,15 @@ class GlobalSearch:
 
             if title and len(title) > 0 and self.isMatchingCriteria(title):
                 foundInTitle = True
-                self.searchResults.appendPathNode(graphObject, title, True, False)
+                self.searchResults.appendPathNode(graphObject, title, isFoundMatch=True, assignToCurrent=False)
                 foundSearchResult = True
 
         if not foundInTitle: # do not search description if already found in title
             desc = graphObject.getDescription()
             if self.isMatchingCriteriaInText(desc):
-                self.searchResults.appendPathNode(graphObject, desc, True, False)
+                pathNode = self.searchResults.appendPathNode(graphObject, desc, isFoundMatch=True, assignToCurrent=False)
+                if isinstance(graphObject, SDGraphObjectComment):
+                    pathNode.contextNode = graphObject.getParent()
                 foundSearchResult = True
         return foundSearchResult
 
@@ -234,7 +238,8 @@ class GlobalSearch:
         if resources:
             for r in range(0, resources.getSize()):
                 resource = resources.getItem(r)
-                if self.isContainerNode(resource) and self.searchInto(resource):
+                subType, _ = SDObj.type(resource)
+                if self.isContainerNode(resource) and self.searchInto(resource, subType=subType):
                     foundSearchResult = True
 
         return foundSearchResult
@@ -263,7 +268,7 @@ class GlobalSearch:
                     [id, label] =  self.getIdAndLabelFromProperty(prop)
                     match = self.getMatchingIdOrLabel(id, label)
                     if match:
-                        pathNode = self.searchResults.appendPathNode(prop, match, True, False)
+                        pathNode = self.searchResults.appendPathNode(prop, match, isFoundMatch=True, assignToCurrent=False)
                         pathNode.name = id
                         pathNode.subType = SDObj.FUNC_INPUT
                         foundSearchResult_lev2 = True
@@ -290,7 +295,7 @@ class GlobalSearch:
                 functionGraph = node.getReferencedResource()
                 if functionGraph:
                     if self.isMatchingCriteria(functionGraph.getIdentifier()):
-                        pathNode = self.searchResults.appendPathNode(node, functionGraph.getIdentifier(), True, False)
+                        pathNode = self.searchResults.appendPathNode(node, functionGraph.getIdentifier(), isFoundMatch=True, assignToCurrent=False)
                         pathNode.contextString = "Function call"
                         pathNode.subType = SDObj.FUNC_CALL
                         foundSearchResult = True
@@ -386,7 +391,7 @@ class GlobalSearch:
                     foundStr = True
                     valStr = sdValStr.get()
                     if self.isMatchingCriteria(valStr):
-                        self.searchResults.appendPathNode(node, valStr, True, False)
+                        self.searchResults.appendPathNode(node, valStr, isFoundMatch=True, assignToCurrent=False)
                         foundSearchResult = True
                 p += 1
 
