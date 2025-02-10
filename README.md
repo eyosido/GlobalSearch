@@ -1,7 +1,7 @@
 # Global Search
-Substance 3D Designer plugin extending the search capabilities to multiple packages/folders/graphs/functions at a time using various filters. It is especially useful to locate cooking errors into package functions.
+Substance 3D Designer plugin extending the search capabilities to multiple packages/folders/graphs/functions at a time using various filters. It is especially useful to locate cooking errors into package functions. Compatible with Substance 3D Designer 12.1.1 to 14.x (and potentially above).
 
-![GlobalSearch_MiniDoc.jpg](https://github.com/eyosido/GlobalSearch/blob/main/doc/GlobalSearch_MiniDoc.jpg)
+![GlobalSearch_MiniDoc.jpg](https://github.com/eyosido/GlobalSearch/blob/main/doc/GlobalSearch_1.3_MiniDoc.png)
 
 # Example use cases
 - Search for terms in frames or comments, input parameters, variable names, graph names, function names etc.
@@ -33,7 +33,13 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
 
 - Search results presented as hierarchical (Tree) or flat (List) view. In List mode, search results can be sorted by column.
 
+- Found nodes may be opened into the Graph View using the "Show in Graph View" context menu (Designer 14 and above only).
+
+- Found graphs, folders and functions may be shown in the Explorer View using the "Show in Explorer" context menu (Designer 14 and above only).
+
 - Persistent Search history keeping the last searches having returned results. Search History can be cleaned in Preferences.
+
+- Navigation previous/next successful searches with arrow buttons.
 
 # Requirements
 Substance 3D Designer 2019.2 or above.
@@ -70,12 +76,11 @@ Ready-to-use packages are available in the [Releases section](https://github.com
 Documentation comprises this file as well as content of the [doc folder](https://github.com/eyosido/GlobalSearch/tree/main/doc).
 
 # Known issues / limitations
-As of version 1.2.2:
+As of version 1.3:
 - Supports only Substance Graphs (texturing graphs).
 - Tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
-- The outcome of a search cannot be opnened inside a Designer view.
 - Frame titles are not currently searchable.
-- The content of functions attached to FX-Map's internal graph nodes is not searchable.
+- The content of FX-Map or Pixel Processor internal graphs may not be searchable.
 
 # Build
 To build the .sdplugin file from source, please follow the [procedure](https://substance3d.adobe.com/documentation/sddoc/packaging-plugins-182257149.html) mentioned in the Substance 3D Designer documentation.
