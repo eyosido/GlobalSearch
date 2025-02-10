@@ -42,7 +42,7 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
 - Navigation previous/next successful searches with arrow buttons.
 
 # Requirements
-Substance 3D Designer 2019.2 or above.
+Substance 3D Designer 12.1.1 to 14.x (and potentially above).
 
 # Installation
 - In Substance 3D Designer, open the Plugin Manager (“Tools / Plugin Manager...” menu)
