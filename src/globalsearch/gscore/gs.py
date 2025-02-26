@@ -22,7 +22,7 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.4.2"
+    VERSION = "1.4.3"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx
@@ -127,17 +127,11 @@ class GlobalSearch:
 
         # search graph name
         if self.searchCriteria.graphName:
-            self.logSearch("searchGraph 1")
             [ident, label] = self.getIdAndLabelFromProperties(graph)
-            self.logSearch("searchGraph 2")
             match = self.getMatchingIdOrLabel(ident, label)
-            self.logSearch("searchGraph 3")
             if match:
-                self.logSearch("searchGraph 4")
                 self.searchResults.setFoundMatchForCurrentPathNode(match)
-                self.logSearch("searchGraph 5")
                 foundSearchResult = True
-            self.logSearch("searchGraph 6")        
 
         # search comments and frames
         if self.searchCriteria.comment:
@@ -155,6 +149,13 @@ class GlobalSearch:
 
             containerPathNode_lev2 = self.pathEnterContainer(node)
             foundSearchResult_lev2 = False
+
+            # search identifier
+            identifier = node.getIdentifier()
+            self.logSearch("searchGraph: node id="+identifier)
+            if self.searchCriteria.searchString == identifier:
+                self.logSearch("searchGraph: found id match")
+                foundSearchResult_lev2 = True
 
             # search graph params functions in input properties
             self.logSearch("searchGraph: searching param functions for current node")
@@ -180,7 +181,6 @@ class GlobalSearch:
                                 pathNode.contextNode = node
                                 pathNode.subType = SDObj.FUNC_PARAM
                                 pathNode.name = paramName
-
                                 pathNode.graph = graph
                                 foundSearchResult_lev2 = True
                             else:
@@ -329,6 +329,16 @@ class GlobalSearch:
         nodes = functionGraph.getNodes()
         for n in range(0, nodes.getSize()):
             node = nodes.getItem(n)
+
+            # search identifier
+            identifier = node.getIdentifier()
+            self.logSearch("searchFunctionGraph: node id="+identifier)
+            if self.searchCriteria.searchString == identifier:
+                self.logSearch("searchFunctionGraph: found id match")
+                pathNode = self.searchResults.appendPathNode(node, identifier, isFoundMatch=True, assignToCurrent=False)
+                pathNode.graph = functionGraph
+                foundSearchResult = True
+
             defId = node.getDefinition().getId()
             if (self.searchCriteria.varGetter and defId.startswith("sbs::function::get")) or \
                 (self.searchCriteria.varSetter and defId.startswith("sbs::function::set")):

@@ -396,9 +396,9 @@ class GSUIWidget(QWidget):
 
     def setNotFoundStatus(self, searchStr = None):
         if searchStr:
-            self.setStatus("Not result found for \"" + searchStr + "\".")
+            self.setStatus("No result found for \"" + searchStr + "\".")
         else:
-            self.setStatus("Not result found.")
+            self.setStatus("No result found.")
 
     def setStatusSearching(self):
         self.setStatus("Searching...")
