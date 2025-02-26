@@ -22,7 +22,7 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.4.1"
+    VERSION = "1.4.2"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx
@@ -206,9 +206,11 @@ class GlobalSearch:
                     isCustomGraph = not isSpecialGraph and not isFunctionGraph
                     self.logSearch("searchGraph: searching custom sub-graphs: refRes:" + str(refRes) + " isFunctionGraph:"+str(isFunctionGraph)+ " isSpecialGraph:"+str(isSpecialGraph) + " isCustomGraph:"+str(isCustomGraph))
 
+                    containerPathNode_lev2.subType = SDObj.GRAPH
+                    containerPathNode_lev2.name = refRes.getIdentifier()
+                    containerPathNode_lev2.referencedRes = refRes
+
                     if (isCustomGraph and self.searchCriteria.enterCustomSubGraphs):
-                        containerPathNode_lev2.subType = SDObj.GRAPH
-                        containerPathNode_lev2.name = refRes.getIdentifier()
                         if self.searchGraph(refRes):
                             foundSearchResult_lev2 = True
 
@@ -341,6 +343,7 @@ class GlobalSearch:
                         containerPathNode = self.pathEnterContainer(node)
                         containerPathNode.subType = SDObj.FUNCTION
                         containerPathNode.name = functionGraph.getIdentifier()
+                        containerPathNode.referencedRes = functionGraph
 
                         if self.searchFunctionGraph(functionGraph):
                             foundSearchResult_lev2 = True

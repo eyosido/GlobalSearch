@@ -57,6 +57,7 @@ class SearchResultPathNode:
         self.sdObj = sdObj
         self.contextNode = None # optional, provides SDNode context in case sdObj cannot provide it (i.e param functions)
         self.contextString = None # optional, when context is defined by a specific string
+        self.referencedRes = None # optional, referenced resource (graph or function) in case a node references a sub-graph or a package function
         self.subType = SDObj.UNDEFINED   # to characterise some sdObj which cannot be characterized by themselves (i.e. function graph of a pixel processor) 
         self.name = "" # when node represents a named item (i.e. graph input param) whose name cannot be determined with sdObj
         self.foundMatch = foundMatch     # used only if match is found at this node level

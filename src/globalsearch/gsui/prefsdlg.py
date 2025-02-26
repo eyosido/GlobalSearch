@@ -22,7 +22,8 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.gsuiMgr = gsuiMgr
         self.setObjectName("GSUIPrefsDlg")
         self.setModal(True)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint) # remove the Help icon in title bar
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint | Qt.WindowCloseButtonHint) # remove the Help icon in title bar
+
         self.setWindowTitle(self.gsuiMgr.APPNAME + " Preferences")
         self.setFixedSize(480, 485)
 

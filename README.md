@@ -76,7 +76,7 @@ Ready-to-use packages are available in the [Releases section](https://github.com
 Documentation comprises this file as well as content of the [doc folder](https://github.com/eyosido/GlobalSearch/tree/main/doc).
 
 # Known issues / limitations
-As of version 1.4.1:
+As of version 1.4.2:
 - Supports only Substance Graphs (texturing graphs).
 - Tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
 - When unloading the plugin, the Windows menu still contains the mention of the GlobalSearch window even though it does not exist anymore. When re-enabling the plugin after disabling it, its window does not appear automatically, use the Windows/GlobalSearch menu to show it.

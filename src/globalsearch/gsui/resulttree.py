@@ -16,6 +16,7 @@ else:
     from PySide6.QtWidgets import QMenu, QTreeWidgetItemIterator
 
 from sd.api.sdnode import SDNode
+from sd.api.sdgraph import SDGraph
 from sd.api.apiexception import APIException
 from globalsearch.gsui.uiutil import GSUIUtil
 from globalsearch.gscore.sdobj import SDObj
@@ -213,7 +214,8 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
     def onCMOpenContainerInEditor(self, checked):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
             if self.bufferedPathNode:
-                self.openResourceInEditor(self.bufferedPathNode.sdObj)
+                obj = self.bufferedPathNode.referencedRes if self.bufferedPathNode.referencedRes else self.bufferedPathNode.sdObj
+                self.openResourceInEditor(obj)
 
     def onCMShowInExplorer(self, checked):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
