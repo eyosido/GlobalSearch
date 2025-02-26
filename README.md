@@ -76,11 +76,12 @@ Ready-to-use packages are available in the [Releases section](https://github.com
 Documentation comprises this file as well as content of the [doc folder](https://github.com/eyosido/GlobalSearch/tree/main/doc).
 
 # Known issues / limitations
-As of version 1.3:
+As of version 1.4:
 - Supports only Substance Graphs (texturing graphs).
 - Tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
-- Frame titles are not currently searchable.
-- The content of FX-Map or Pixel Processor internal graphs may not be searchable.
+- When unloading the plugin, the Windows menu still contains the mention of the GlobalSearch window even though it does not exist anymore. When re-enabling the plugin after disabling it, its window does not appear automatically, use the Windows/GlobalSearch menu to show it.
+- Items withing FX-Map, Pixel Processor or Value Processor graphs cannot currently be opened from the Search Result tree (may be a Designer API limitation).
+- The "Search Into" field is not updated when a graph/package is created/loaded/removed due to the lack of notification from the Designer API. The Refresh button updates this field.
 
 # Build
 To build the .sdplugin file from source, please follow the [procedure](https://substance3d.adobe.com/documentation/sddoc/packaging-plugins-182257149.html) mentioned in the Substance 3D Designer documentation.
