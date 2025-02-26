@@ -22,7 +22,7 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.4"
+    VERSION = "1.4.1"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx
@@ -208,6 +208,7 @@ class GlobalSearch:
 
                     if (isCustomGraph and self.searchCriteria.enterCustomSubGraphs):
                         containerPathNode_lev2.subType = SDObj.GRAPH
+                        containerPathNode_lev2.name = refRes.getIdentifier()
                         if self.searchGraph(refRes):
                             foundSearchResult_lev2 = True
 
