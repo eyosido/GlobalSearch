@@ -1,7 +1,7 @@
 # Global Search
 Substance 3D Designer plugin extending the search capabilities to multiple packages/folders/graphs/functions at a time using various filters. It is especially useful to locate cooking errors into package functions. Compatible with Substance 3D Designer 12.1.1 to 14.x (and potentially above).
 
-![GlobalSearch_MiniDoc.jpg](https://github.com/eyosido/GlobalSearch/blob/main/doc/GlobalSearch_1.3_MiniDoc.png)
+![GlobalSearch_MiniDoc.jpg](https://github.com/eyosido/GlobalSearch/blob/main/doc/GlobalSearch_MiniDoc.png)
 
 # Example use cases
 - Search for terms in frames or comments, input parameters, variable names, graph names, function names etc.
