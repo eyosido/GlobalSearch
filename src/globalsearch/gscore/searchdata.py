@@ -4,6 +4,7 @@
 # ---------------
 
 from sd.api.sdgraph import SDGraph
+from sd.api.sbs.sdsbsfxmapgraph import SDSBSFxMapGraph
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore import gslog
 from globalsearch.gscore.gslog import GSLogger
@@ -71,17 +72,31 @@ class SearchResultPathNode:
     def isLeaf(self):
         return len(self.children) == 0
     
-    def getParentGraphPathNode(self):
+    def getParentGraphPathNode(self):   
         p = self.parent
         while p:
-            if p.sdObj and isinstance(p.sdObj, SDGraph):
+            if p.sdObj and (isinstance(p.sdObj, SDSBSFxMapGraph) or isinstance(p.sdObj, SDGraph)):
                 return p
             else:
                 p = p.parent
         return None
+    
+    def sdObjType(self):
+        type = self.subType
+        if type == SDObj.UNDEFINED:
+            if self.sdObj:
+                type,_ = SDObj.type(self.sdObj)
+        return type
 
     def consolidatedName(self):
         type,_ = self.consolidatedType()
+        # if self.hasName():
+        #     gslog.debug("consolidatedName() hasName " + self.name)
+        #     return self.name
+        # else:
+        #     gslog.debug("consolidatedName() not hasName " + SDObj.name(self.sdObj, type))
+        #     return SDObj.name(self.sdObj, type)
+        
         return self.name if self.hasName() else SDObj.name(self.sdObj, type)
 
     def consolidatedType(self):
@@ -90,19 +105,40 @@ class SearchResultPathNode:
             typeStr = SDObj.typeStrForNonObjType(self.subType)
         else:
             (type,typeStr) = SDObj.type(self.sdObj)
+            # gslog.debug("consolidatedType() sdObj="+str(self.sdObj) + " typeStr="+typeStr)
         return (type, typeStr)
             
-    def __str__(self):
-        _,typeStr = SDObj.type(self.sdObj)
+    def dumpStr(self, dump_match=True, use_indent=True):
+        if self.subType == SDObj.UNDEFINED:
+            _,typeStr = SDObj.type(self.sdObj)
+        else:
+            typeStr = SDObj.constantName(self.subType)
         indent = ""
         n = self
-        while n.parent:
-            indent += "    "
-            n = n.parent
+        if use_indent:
+            while n.parent is not None:
+                indent += "    "
+                if n.parent is not None:
+                    n = n.parent
+                else:
+                    break
 
-        match = self.foundMatch if self.foundMatch else ""
-        s = indent + "Type: " + typeStr + " - Name: " + self.consolidatedName() + " - Match: " + match
+        s = indent + "Type: " + typeStr + " - Name: " + self.consolidatedName()
+        if dump_match:
+            match = self.foundMatch if self.foundMatch else ""
+            s += " - Match: " + match
         return s
+
+    def __str__(self):
+        return self.dumpStr()
+    
+    def logPathNodeBranch(self):
+        gslog.info("Node branch (root is last):")
+        gslog.info(self.dumpStr(dump_match=False, use_indent=False))
+        p = self.parent
+        while p:
+            gslog.info(p.dumpStr(dump_match=False, use_indent=False))
+            p = p.parent
 
 class SearchResults:
     """
@@ -112,7 +148,12 @@ class SearchResults:
         self.pathTree = None
         self.currentPathNode = self.pathTree
         self.foundCount = 0
+        self.searchLogs = False
     
+    def logSearch(self, s):
+        if self.searchLogs:
+            gslog.info('[SEARCH] ' + s)
+
     def hasSearchResults(self):
         return self.pathTree != None
 
@@ -124,26 +165,36 @@ class SearchResults:
 
     # --- Path tree operations
     def appendPathNode(self, sdObj, foundMatchStr = None, isFoundMatch = False, assignToCurrent = True):
-    # we are using both foundMatchStr and isFoundMatch as for presets foundMatchStr can be empty
+        # we are using both foundMatchStr and isFoundMatch as for presets foundMatchStr can be empty
+        logSearchStr = "appendPathNode: " + SDObj.dumpStr(sdObj)
+
         newPathNode = SearchResultPathNode(sdObj, foundMatchStr, self.pathTree)
         if not self.pathTree:
             self.pathTree = newPathNode
         else:
             if self.currentPathNode == None:    # happens when we just left a package which has no parent
                 self.currentPathNode = newPathNode
-            self.currentPathNode.children.append(newPathNode)
-
-        newPathNode.parent = self.currentPathNode
+            else:
+                newPathNode.parent = self.currentPathNode # don't do this in the above case else we'll create a cycle with parent pointing to self
+                self.currentPathNode.children.append(newPathNode)
 
         if assignToCurrent:
             self.currentPathNode = newPathNode
 
         if isFoundMatch:
+            logSearchStr += ' - match found for "' + foundMatchStr + '" assignToCurrent=' + str(assignToCurrent)
             self.incrementFoundCount()
+
+        self.logSearch(logSearchStr)
 
         return newPathNode
 
     def dropCurrentPathBranch(self):
+        # gslog.debug("dropCurrentPathBranch, tree before drop:")
+        # gslog.debug("self.currentPathNode="+str(self.currentPathNode))
+        # gslog.debug("self.currentPathNode.parent="+str(self.currentPathNode.parent))
+        # self.log()
+
         if not self.currentPathNode.parent:
             self.currentPathNode = None
             self.pathTree = None
@@ -151,13 +202,17 @@ class SearchResults:
             self.currentPathNode.parent.children.remove(self.currentPathNode)
             self.currentPathNode = self.currentPathNode.parent
 
-    def setFoundMatchForCurrentPathNode(self, foundMatch):        
-        self.currentPathNode.foundMatch = foundMatch
-        self.incrementFoundCount()
+        # gslog.debug("dropCurrentPathBranch, tree after drop, self.currentPathNode="+str(self.currentPathNode))
+        # self.log()
+
+    def setFoundMatchForCurrentPathNode(self, foundMatch):
+        if self.currentPathNode: 
+            self.currentPathNode.foundMatch = foundMatch
+            self.incrementFoundCount()
 
     # --- debug
     def logTreeStr(self, pathNode):
-        gslog.log(pathNode.__str__())
+        gslog.info(pathNode.__str__())
         for child in pathNode.children:
             self.logTreeStr(child)
 

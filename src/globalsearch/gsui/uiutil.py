@@ -25,6 +25,9 @@ class GSUIUtil:
     TYPE_ICON_FILE = {
         SDObj.PACKAGE: "gs_package.png",
         SDObj.GRAPH: "gs_graph.png",
+        SDObj.FX_MAP_GRAPH: "gs_graph.png",
+        SDObj.PIXEL_PROCESSOR_FUNC: "gs_function.png",
+        SDObj.VALUE_PROCESSOR_FUNC: "gs_function.png",
         SDObj.FOLDER: "gs_folder.png",
         SDObj.FUNCTION: "gs_function.png",
         SDObj.COMMENT: "gs_comment.png",

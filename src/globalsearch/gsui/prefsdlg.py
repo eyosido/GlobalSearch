@@ -17,18 +17,17 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
     """
     Preferences dialog
     """
-    def __init__(self, parent=None):
+    def __init__(self, gsuiMgr, parent=None):
         super().__init__(parent)
-
+        self.gsuiMgr = gsuiMgr
         self.setObjectName("GSUIPrefsDlg")
         self.setModal(True)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint) # remove the Help icon in title bar
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        self.setWindowTitle(GSUIManager.APPNAME + " Preferences")
-        self.setFixedSize(430, 485)
+        self.setWindowTitle(self.gsuiMgr.APPNAME + " Preferences")
+        self.setFixedSize(480, 485)
 
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.setGeometry(QtCore.QRect(170, 450, 251, 32))
+        self.buttonBox.setGeometry(QtCore.QRect(220, 450, 251, 32))
         self.buttonBox.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
@@ -68,7 +67,7 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.l_about.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.l_about.setObjectName("l_about")
         self.gb_search_process = QtWidgets.QGroupBox(self)
-        self.gb_search_process.setGeometry(QtCore.QRect(10, 320, 411, 121))
+        self.gb_search_process.setGeometry(QtCore.QRect(10, 320, 460, 121))
         self.gb_search_process.setObjectName("gb_search_process")
         self.chk_natural_search = QtWidgets.QCheckBox(self.gb_search_process)
         self.chk_natural_search.setGeometry(QtCore.QRect(10, 30, 141, 23))
@@ -77,7 +76,7 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.chk_case_sensitive.setGeometry(QtCore.QRect(10, 57, 151, 23))
         self.chk_case_sensitive.setObjectName("chk_case_sensitive")
         self.chk_enter_pkg_func = QtWidgets.QCheckBox(self.gb_search_process)
-        self.chk_enter_pkg_func.setGeometry(QtCore.QRect(220, 57, 181, 23))
+        self.chk_enter_pkg_func.setGeometry(QtCore.QRect(220, 57, 280, 23))
         self.chk_enter_pkg_func.setObjectName("chk_enter_pkg_func")
         self.chk_enter_subgraphs = QtWidgets.QCheckBox(self.gb_search_process)
         self.chk_enter_subgraphs.setGeometry(QtCore.QRect(220, 30, 181, 23))
@@ -126,10 +125,10 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
 "Package functions are already searched as located inside the package (or a folder)\n"
 "so you may want to disable this option to avoid duplicate search results\n"
 "if you are also searching in graphs.", None, -1))
-        self.chk_enter_pkg_func.setText(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Enter pkg functions in graphs", None, -1))
+        self.chk_enter_pkg_func.setText(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Enter pkg functions in function graphs", None, -1))
         self.chk_enter_subgraphs.setToolTip(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Enbter custom graphs being referenced into the currently parsed graph. Since these sub graphs are also\n"
 "referenced independently in the package, this may lead to duplicate search results and longer search time.", None, -1))
-        self.chk_enter_subgraphs.setText(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Enter custom sub-graphs", None, -1))
+        self.chk_enter_subgraphs.setText(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Enter user sub-graphs", None, -1))
         self.chk_disp_node_ids.setText(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Display node Ids", None, -1))
         self.gb_search_history.setTitle(QtWidgets.QApplication.translate("GSUIPrefsDlg", "Search History", None, -1))
         self.chk_sh_enable.setToolTip(QtWidgets.QApplication.translate("GSUIPrefsDlg", "The last few search entries leading to results will be kept in a persistent list", None, -1))
@@ -156,8 +155,7 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
             self.chk_graphParamFunc.stateChanged.connect(self.onFunctionSubStateChanged)
 
     def setupFromPrefs(self):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        prefs = GSUIManager.prefs
+        prefs = self.gsuiMgr.prefs
         self.chk_graph_name.setChecked(prefs.sc_GraphName)
         self.chk_folder_name.setChecked(prefs.sc_FolderName)
         self.chk_comment.setChecked(prefs.sc_Comment)
@@ -177,8 +175,7 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.chk_disp_node_ids.setChecked(prefs.sp_display_node_ids)
 
     def saveToPrefs(self):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        prefs = GSUIManager.prefs
+        prefs = self.gsuiMgr.prefs
         prefs.sc_GraphName = self.chk_graph_name.isChecked()
         prefs.sc_FolderName = self.chk_folder_name.isChecked()
         prefs.sc_Comment = self.chk_comment.isChecked()
@@ -192,9 +189,9 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         if prefs.sh_enable != newSearchHistoryEnable:
             # search history has been enabled or disabled since opening, update UI
             if newSearchHistoryEnable:
-                GSUIManager.uiWidget.setupSearchHistory()
+                self.gsuiMgr.uiWidget.setupSearchHistory()
             else:
-                GSUIManager.uiWidget.disableSearchHistory()
+                self.gsuiMgr.uiWidget.disableSearchHistory()
 
             prefs.sh_enable = self.chk_sh_enable.isChecked()
 
@@ -221,15 +218,13 @@ class GSUIPrefsDlg(QtWidgets.QDialog):
         self.chk_function.stateChanged.connect(self.onFunctionStateChanged)
 
     def onClearSearchHistoryClicked(self):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        if GSUIManager.uiWidget.searchHistory:
+        if self.gsuiMgr.uiWidget.searchHistory:
             if GSUIUtil.askYesNoQuestion("Clear Search History?", self):
-                GSUIManager.uiWidget.searchHistory.clear()
+                self.gsuiMgr.uiWidget.searchHistory.clear()
         
     def onAccept(self):
         self.saveToPrefs()
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        GSUIManager.uiWidget.searchResultTreeWidget.updateFromPrefs()
+        self.gsuiMgr.uiWidget.searchResultTreeWidget.updateFromPrefs()
         self.accept()
 
     def onReject(self):

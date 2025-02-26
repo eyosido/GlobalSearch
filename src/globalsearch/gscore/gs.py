@@ -3,30 +3,17 @@
 # (c) 2019-2022 Eyosido Software SARL
 # ---------------
 
-import sd
-from sd.context import Context
 from sd.api.sdpackage import SDPackage
 from sd.api.sdgraph import SDGraph
-from sd.api.sduimgr import SDUIMgr
-from sd.api.sdapplication import SDApplication
-from sd.api.sdarray import SDArray
 from sd.api.sbs.sdsbsfunctiongraph import SDSBSFunctionGraph
-from sd.api.sbs.sdsbsfunctionnode import SDSBSFunctionNode
-from sd.api.sdproperty import SDProperty, SDPropertyCategory
-from sd.api.sdvalue import SDValue
-from sd.api.sdapiobject import SDAPIObject
+from sd.api.sdproperty import SDPropertyCategory
 from sd.api.sdtypefloat import *
 from sd.api.sdvaluefloat import *
 from sd.api.sdnode import SDNode
 from sd.api.sdvaluestring import SDValueString
-from sd.api.sddefinition import SDDefinition
 from sd.api.sdresourcefolder import SDResourceFolder
-from sd.api.sdgraphobject import SDGraphObject
 from sd.api.sdgraphobjectcomment import SDGraphObjectComment
 from sd.api.sdgraphobjectframe import SDGraphObjectFrame
-from sd.api.sbs.sdsbscompnode import SDSBSCompNode
-from sd.api.sbs.sdsbsfxmapnode import SDSBSFxMapNode
-from sd.api.sbs.sdsbscompgraph import SDSBSCompGraph
 
 from globalsearch.gscore import gslog
 from globalsearch.gscore.sdobj import SDObj 
@@ -35,17 +22,25 @@ class GlobalSearch:
     """
     Main search class
     """ 
-    VERSION = "1.3"
+    VERSION = "1.4"
 
     def __init__(self, ctx, searchRoot, searchCriteria, searchResults):
         self.context = ctx
         self.searchRoot = searchRoot
         self.searchCriteria = searchCriteria
         self.searchResults = searchResults
+        self.searchLogs = False # enable to log information about the search (debug only)
+        self.searchResults.searchLogs = self.searchLogs
+        self.depth = 0  # tree depth, used mostly for debugging
 
     # -------- Public
     def search(self):
+        self.depth = 0
         self.searchInto(self.searchRoot)
+
+    def logSearch(self, s):
+        if self.searchLogs:
+            gslog.debug('[SEARCH]' + s)
 
     # -------- Private
     def isContainerNode(self, sdObj):
@@ -53,20 +48,30 @@ class GlobalSearch:
             or isinstance(sdObj, SDResourceFolder)
 
     def pathEnterContainer(self, sdContainerObj):
+        self.logSearch("pathEnterContainer: " + SDObj.dumpStr(sdContainerObj))
         return self.searchResults.appendPathNode(sdContainerObj)
     
     def pathLeaveContainer(self, containerPathNode, foundSearchResult):
+        self.logSearch("pathLeaveContainer: " + SDObj.dumpStr(containerPathNode))
         if not foundSearchResult:
             self.searchResults.currentPathNode = containerPathNode   # restore currentPathNode
+            self.logSearch("Dropping current branch")
             self.searchResults.dropCurrentPathBranch()
         
         self.searchResults.currentPathNode = containerPathNode.parent   # we're done with this container, move to parent
 
-    def searchInto(self, sdObj, subType = SDObj.UNDEFINED, name = ""):
+    def searchInto(self, sdObj, subType = SDObj.ROOT, name = ""):
+        self.logSearch("searchInto " + SDObj.dumpStr(sdObj) + " depth="+str(self.depth))
         if sdObj == None:
+            # we need to have root node when searching over multiple packages
+            containerPathNode = self.pathEnterContainer(sdObj)
+            containerPathNode.subType = SDObj.ROOT
+            containerPathNode.name = "Root"
             foundSearchResult = self.searchPackages()
+            self.pathLeaveContainer(containerPathNode, foundSearchResult)
         else:
             containerPathNode = self.pathEnterContainer(sdObj)
+            self.depth += 1
             containerPathNode.subType = subType
             containerPathNode.name = name
 
@@ -79,27 +84,36 @@ class GlobalSearch:
                 foundSearchResult = self.searchGraph(sdObj)
             elif isinstance(sdObj, SDResourceFolder):
                 foundSearchResult = self.searchFolder(sdObj)
+            else:
+                gslog.warning("Nothing to search into, this is not a container")
 
             self.pathLeaveContainer(containerPathNode, foundSearchResult)
+            self.depth -= 1
 
         return foundSearchResult
 
     def searchPackages(self):
+        self.logSearch("searchPackages ")
         foundSearchResult = False
         app = self.context.getSDApplication()
         packages = app.getPackageMgr().getUserPackages()
         if packages:
-            for p in range(0, packages.getSize()):
+            count = packages.getSize()
+            self.logSearch("searchPackages found " + str(count) + ' packages')
+            for p in range(0, count):
                 package = packages.getItem(p)
                 if self.searchInto(package, subType=SDObj.PACKAGE):
                     foundSearchResult = True
         return foundSearchResult
 
     def searchPackage(self, package):
+        self.logSearch("searchPackage " + SDObj.dumpStr(package))
         foundSearchResult = False
         resources = package.getChildrenResources(False)
         if resources:
-            for r in range(0, resources.getSize()):
+            count = resources.getSize()
+            self.logSearch("searchPackage found " + str(count) + ' resources')
+            for r in range(0, count):
                 resource = resources.getItem(r)
                 subType, _ = SDObj.type(resource)
                 if self.isContainerNode(resource) and self.searchInto(resource, subType=subType):
@@ -108,15 +122,22 @@ class GlobalSearch:
         return foundSearchResult
 
     def searchGraph(self, graph):
+        self.logSearch("searchGraph " + SDObj.dumpStr(graph))
         foundSearchResult = False
 
         # search graph name
         if self.searchCriteria.graphName:
-            [id, label] = self.getIdAndLabelFromProperties(graph)
-            match = self.getMatchingIdOrLabel(id, label)
+            self.logSearch("searchGraph 1")
+            [ident, label] = self.getIdAndLabelFromProperties(graph)
+            self.logSearch("searchGraph 2")
+            match = self.getMatchingIdOrLabel(ident, label)
+            self.logSearch("searchGraph 3")
             if match:
+                self.logSearch("searchGraph 4")
                 self.searchResults.setFoundMatchForCurrentPathNode(match)
+                self.logSearch("searchGraph 5")
                 foundSearchResult = True
+            self.logSearch("searchGraph 6")        
 
         # search comments and frames
         if self.searchCriteria.comment:
@@ -125,70 +146,81 @@ class GlobalSearch:
 
         # search graph param functions and subgraphs
         nodes = graph.getNodes()
+        self.logSearch("searchGraph: parsing graph nodes")
         for n in range(0, nodes.getSize()):
             node = nodes.getItem(n)
-            
-            if self.searchCriteria.graphParamFunc or self.searchCriteria.ss_param_func:
-                # search graph params functions
-                properties = node.getProperties(SDPropertyCategory.Input)
-                if properties:
-                    foundSearchResult_lev2 = False
-                    containerPathNode = self.pathEnterContainer(node)
-                    p = 0
-                    psize = properties.getSize()
-                    while p < psize:
-                        prop = properties.getItem(p)
-                        propGraph = node.getPropertyGraph(prop)
-                        functionOnly = prop.isFunctionOnly()
+            nodeType,_ = SDObj.type(node)   
 
-                        if propGraph and not functionOnly: # ignore function props of graphs having subgraphs like pixel processor
-                            # a function graph is controlling this property
+            self.logSearch("searchGraph: current node: " + SDObj.dumpStr(node))
+
+            containerPathNode_lev2 = self.pathEnterContainer(node)
+            foundSearchResult_lev2 = False
+
+            # search graph params functions in input properties
+            self.logSearch("searchGraph: searching param functions for current node")
+            properties = node.getProperties(SDPropertyCategory.Input)
+            if properties:
+                p = 0
+                psize = properties.getSize()
+                while p < psize:
+                    prop = properties.getItem(p)
+                    propGraph = node.getPropertyGraph(prop)
+                    functionOnly = prop.isFunctionOnly()
+
+                    self.logSearch("searchGraph: prop=" + str(prop) + " propGraph="+str(propGraph) + " functionOnly="+str(functionOnly))
+
+                    if propGraph and not functionOnly:  # the Pixel Processor function is "function-only", we'll treat it below in the hasSystemContent case
+                        self.logSearch("searchGraph: propGraph found" + str(propGraph) + " getReferencedResource=" + str(node.getReferencedResource())) 
+                        if self.searchCriteria.graphParamFunc or self.searchCriteria.ss_param_func:
                             paramName = prop.getLabel()
                             if self.searchCriteria.ss_param_func:
+                                # Special search in parameter functions only
+                                self.logSearch("searchGraph: special search: param functions only, adding found param function")
                                 pathNode = self.searchResults.appendPathNode(propGraph, "", isFoundMatch=True, assignToCurrent=False)
                                 pathNode.contextNode = node
                                 pathNode.subType = SDObj.FUNC_PARAM
                                 pathNode.name = paramName
+
                                 pathNode.graph = graph
                                 foundSearchResult_lev2 = True
                             else:
-                                 if self.searchInto(propGraph, SDObj.FUNC_PARAM, paramName):
-                                     foundSearchResult_lev2 = True
-                        p += 1
-                    self.pathLeaveContainer(containerPathNode, foundSearchResult_lev2)
-                    if foundSearchResult_lev2:
-                        foundSearchResult = True
-
-            # search sub-graphs
+                                # Search into regular parameter function
+                                self.logSearch("searchGraph: searching into regular param function")
+                                if self.searchInto(propGraph, SDObj.FUNC_PARAM, paramName):
+                                    foundSearchResult_lev2 = True
+                    p += 1
+                    
             refRes = node.getReferencedResource()
-            if isinstance(refRes, SDGraph):
-                isFunctionGraph = isinstance(refRes, SDSBSFunctionGraph)
-                nodeType,_ = SDObj.type(node)
-                isSpecialGraph = SDObj.isSpecialSubgraphType(nodeType)
-                isCustomGraph = not isSpecialGraph and not isFunctionGraph
 
-                if (isCustomGraph and self.searchCriteria.enterCustomSubGraphs) or\
-                    isSpecialGraph or\
-                    (isFunctionGraph and self.searchCriteria.enterGraphPkgFct):
-                    # we are not using searchInto() as this would insert an SDGraph path node,
-                    # rather we want to insert an SDNode path node as this one holds the type (i.e. fx-map)
-                    foundSearchResult_lev2 = False
-                    containerPathNode = self.pathEnterContainer(node)
+            # system nodes having inner graphs (FX-Map, Pixel Processor, Value)
+            if SDObj.hasSystemContent(nodeType):
+                self.logSearch("searchGraph: Searching into system node " + str(refRes)) 
+                if self.searchInto(refRes, SDObj.systemContentType(nodeType), SDObj.systemGraphName(nodeType)):
+                    foundSearchResult_lev2 = True
+            else:
+                # search custom sub-graphs
+                if isinstance(refRes, SDGraph):
+                    isFunctionGraph = isinstance(refRes, SDSBSFunctionGraph)
+                    nodeType,_ = SDObj.type(node)
+                    isSpecialGraph = SDObj.hasSystemContent(nodeType)
+                    isCustomGraph = not isSpecialGraph and not isFunctionGraph
+                    self.logSearch("searchGraph: searching custom sub-graphs: refRes:" + str(refRes) + " isFunctionGraph:"+str(isFunctionGraph)+ " isSpecialGraph:"+str(isSpecialGraph) + " isCustomGraph:"+str(isCustomGraph))
 
-                    if isCustomGraph or isFunctionGraph:
-                        resType,_ = SDObj.type(refRes)
-                        containerPathNode.name = SDObj.name(refRes, resType) # graph name
+                    if (isCustomGraph and self.searchCriteria.enterCustomSubGraphs):
+                        containerPathNode_lev2.subType = SDObj.GRAPH
+                        if self.searchGraph(refRes):
+                            foundSearchResult_lev2 = True
 
-                    if self.searchGraph(refRes):
-                        foundSearchResult_lev2 = True
+            self.pathLeaveContainer(containerPathNode_lev2, foundSearchResult_lev2)
 
-                    self.pathLeaveContainer(containerPathNode, foundSearchResult_lev2)
-                    if foundSearchResult_lev2:
-                        foundSearchResult = True
-
+            if foundSearchResult_lev2:
+                foundSearchResult = True
+            
+        self.logSearch("searchGraph: exiting with foundSearchResult="+str(foundSearchResult))
         return foundSearchResult
 
     def searchGraphObjects(self, graph):
+        self.logSearch("searchGraphObjects into " + str(graph))
         foundSearchResult = False
         # search comments or frames
         graphObjects = graph.getGraphObjects()
@@ -201,30 +233,36 @@ class GlobalSearch:
         return foundSearchResult
 
     def searchGraphObject(self, graphObject):
+        self.logSearch("searchGraphObject " + SDObj.dumpStr(graphObject))
         foundSearchResult = False
-        foundInTitle = False
-        if isinstance(graphObject, SDGraphObjectFrame):
-            title = ""
+        isFrame = False
+        title = ""
+        if isinstance(graphObject, SDGraphObjectFrame):            
+            isFrame = True
             try:
                 title = graphObject.getTitle()
             except:
-                gslog.log("Error retreiving frame title")
+                gslog.error("Error retreiving frame title")
 
             if title and len(title) > 0 and self.isMatchingCriteria(title):
-                foundInTitle = True
-                self.searchResults.appendPathNode(graphObject, title, isFoundMatch=True, assignToCurrent=False)
+                pathNode = self.searchResults.appendPathNode(graphObject, title, isFoundMatch=True, assignToCurrent=False)
+                pathNode.name = title
                 foundSearchResult = True
 
-        if not foundInTitle: # do not search description if already found in title
-            desc = graphObject.getDescription()
-            if self.isMatchingCriteriaInText(desc):
-                pathNode = self.searchResults.appendPathNode(graphObject, desc, isFoundMatch=True, assignToCurrent=False)
-                if isinstance(graphObject, SDGraphObjectComment):
-                    pathNode.contextNode = graphObject.getParent()
-                foundSearchResult = True
+        # search in comment
+        desc = graphObject.getDescription()
+        if self.isMatchingCriteriaInText(desc):
+            pathNode = self.searchResults.appendPathNode(graphObject, desc, isFoundMatch=True, assignToCurrent=False)
+            if isFrame:
+                pathNode.name = title
+            if isinstance(graphObject, SDGraphObjectComment):
+                pathNode.contextNode = graphObject.getParent()
+            foundSearchResult = True
+
         return foundSearchResult
 
     def searchFolder(self, folder):
+        self.logSearch("searchFolder " + SDObj.dumpStr(folder))
         foundSearchResult = False
         # search folder name
         if self.searchCriteria.folderId:
@@ -245,11 +283,12 @@ class GlobalSearch:
         return foundSearchResult
 
     def searchFunctionGraph(self, functionGraph):
+        self.logSearch("searchFunctionGraph " + SDObj.dumpStr(functionGraph))
         foundSearchResult = False
         #search function name
         if self.searchCriteria.funcName:
-            [id, label] = self.getIdAndLabelFromProperties(functionGraph)
-            match = self.getMatchingIdOrLabel(id, label)
+            [ident, label] = self.getIdAndLabelFromProperties(functionGraph)
+            match = self.getMatchingIdOrLabel(ident, label)
             if match:
                 self.searchResults.setFoundMatchForCurrentPathNode(match)
                 foundSearchResult = True
@@ -265,11 +304,12 @@ class GlobalSearch:
                 psize = properties.getSize()
                 while p < psize:
                     prop = properties.getItem(p)
-                    [id, label] =  self.getIdAndLabelFromProperty(prop)
-                    match = self.getMatchingIdOrLabel(id, label)
+                    [ident, label] =  self.getIdAndLabelFromProperty(prop)
+                    match = self.getMatchingIdOrLabel(ident, label)
                     if match:
                         pathNode = self.searchResults.appendPathNode(prop, match, isFoundMatch=True, assignToCurrent=False)
-                        pathNode.name = id
+                        pathNode.name = ident
+
                         pathNode.subType = SDObj.FUNC_INPUT
                         foundSearchResult_lev2 = True
                     p += 1
@@ -294,37 +334,52 @@ class GlobalSearch:
             elif defId == "sbs::function::instance":
                 functionGraph = node.getReferencedResource()
                 if functionGraph:
-                    if self.isMatchingCriteria(functionGraph.getIdentifier()):
-                        pathNode = self.searchResults.appendPathNode(node, functionGraph.getIdentifier(), isFoundMatch=True, assignToCurrent=False)
-                        pathNode.contextString = "Function call"
-                        pathNode.subType = SDObj.FUNC_CALL
-                        foundSearchResult = True
+                    if self.searchCriteria.enterGraphPkgFct:
+                        # enter package function
+                        foundSearchResult_lev2 = False
+                        containerPathNode = self.pathEnterContainer(node)
+                        containerPathNode.subType = SDObj.FUNCTION
+                        containerPathNode.name = functionGraph.getIdentifier()
+
+                        if self.searchFunctionGraph(functionGraph):
+                            foundSearchResult_lev2 = True
+
+                        self.pathLeaveContainer(containerPathNode, foundSearchResult_lev2)
+
+                        if foundSearchResult_lev2:
+                            foundSearchResult = True
+                    else:
+                        if self.isMatchingCriteria(functionGraph.getIdentifier()):
+                            pathNode = self.searchResults.appendPathNode(node, functionGraph.getIdentifier(), isFoundMatch=True, assignToCurrent=False)
+                            pathNode.contextString = "Function call"
+                            pathNode.subType = SDObj.FUNC_CALL
+                            foundSearchResult = True
 
         return foundSearchResult
 
     def getIdFromProperties(self, propertyHolder):
         sdIdVal = propertyHolder.getPropertyValueFromId("identifier", SDPropertyCategory.Annotation)
-        id = "" if not sdIdVal or sdIdVal.get() == None else sdIdVal.get()
-        return id
+        ident = "" if not sdIdVal or sdIdVal.get() == None else sdIdVal.get()
+        return ident
 
     def getIdAndLabelFromProperties(self, propertyHolder):
-        id = self.getIdFromProperties(propertyHolder)
+        ident = self.getIdFromProperties(propertyHolder)
         label = ""
         sdLabelVal = propertyHolder.getPropertyValueFromId("label", SDPropertyCategory.Annotation)
         label = "" if not sdLabelVal or sdLabelVal.get() == None else sdLabelVal.get()
-        return [id, label]
+        return [ident, label]
 
     def getIdAndLabelFromProperty(self, property):
-        id = property.getId()
+        ident = property.getId()
         label = property.getLabel()
         if label == None:
             label = ""
-        return [id, label]
+        return [ident, label]
 
-    def getMatchingIdOrLabel(self, id, label):
+    def getMatchingIdOrLabel(self, ident, label):
         match = "" 
-        if self.isMatchingCriteria(id):
-            match = id
+        if self.isMatchingCriteria(ident):
+            match = ident
         elif self.isMatchingCriteria(label):
             match = label
         return match

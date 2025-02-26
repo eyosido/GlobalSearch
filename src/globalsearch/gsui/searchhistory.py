@@ -81,7 +81,7 @@ class GSUISearchHistory:
                 with open(path, "r") as readFile: 
                     self.history = json.load(readFile)
             except:
-                gslog.log("Error loading search history.")
+                gslog.error("Error loading search history.")
             finally:
                 self.callback.searchHistoryUpdateEnded()
 
@@ -92,7 +92,7 @@ class GSUISearchHistory:
             with open(path, "w") as writeFile: 
                 json.dump(self.history, writeFile)
         except:
-            gslog.log("Error saving search history.")
+            gslog.error("Error saving search history.")
         finally:
                 self.callback.searchHistoryUpdateEnded()
 
@@ -103,23 +103,23 @@ class GSUISearchHistory:
                 os.remove(path)
                 self.callback.searchHistoryCleared()
             except:
-                gslog.log("Error deleting search history file.")
+                gslog.error("Error deleting search history file.")
 
     def nav_append(self, text):
+        gslog.debug("nav_append "+ text)
         self.navigation.append(text)
         if len(self.navigation) > self.DEFAULT_MAX_SEARCH_NAVIGATION_COUNT:
             self.navigation.pop(0)  # remove first item
 
         self.nav_index = len(self.navigation) - 1
+        self.logNav()
 
     def nav_has_next(self):
         b = self.nav_index < len(self.navigation)-1
-        gslog.log("nav_has_next() index=" + str(self.nav_index) + " len="+str(len(self.navigation)) + " returning " + str(b))
         return b
 
     def nav_has_prev(self):
         b = self.nav_index > 0
-        gslog.log("nav_has_prev() index=" + str(self.nav_index) + " len="+str(len(self.navigation)) + " returning " + str(b))
         return b
 
     def nav_next(self):
@@ -127,7 +127,8 @@ class GSUISearchHistory:
         if self.nav_has_next():
             self.nav_index += 1
             text = self.navigation[self.nav_index]
-            gslog.log("nav_next() index=" + str(self.nav_index) + " len="+str(len(self.navigation)) + " returning " + text)
+        gslog.debug("nav_next ->"+ text)
+        self.logNav()
         return text
 
     def nav_prev(self):
@@ -135,5 +136,19 @@ class GSUISearchHistory:
         if self.nav_has_prev():
             self.nav_index -= 1
             text = self.navigation[self.nav_index]
-            gslog.log("nav_prev() index=" + str(self.nav_index) + " len="+str(len(self.navigation)) + " returning " + text)
+        gslog.debug("nav_prev ->"+ text)
+        self.logNav()
         return text
+    
+    def logNav(self):
+        s = ""
+        i=0
+        for n in self.navigation:
+            if len(s)>0:
+                s+=', '
+            s += str(i) + ': ' + n
+            i += 1
+        gslog.debug('Nav list:' + s)
+        gslog.debug('Nav index: ' + str(self.nav_index))
+
+

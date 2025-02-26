@@ -85,7 +85,27 @@
        <item>
         <widget class="QToolButton" name="btn_clear">
          <property name="toolTip">
-          <string>Clears both search field and search results</string>
+          <string>Clear both search field and search results</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="btn_collapse">
+         <property name="toolTip">
+          <string>Collapse all items in the Search Result tree</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="btn_expand">
+         <property name="toolTip">
+          <string>Expand all items in the Search Result tree</string>
          </property>
          <property name="text">
           <string>...</string>

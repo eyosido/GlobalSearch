@@ -3,24 +3,23 @@
 # (c) 2019-2022 Eyosido Software SARL
 # ---------------
 
-import sd
+import sd, sys
 if sd.getContext().getSDApplication().getVersion() < "14.0.0":
     from PySide2 import QtWidgets
     from PySide2.QtGui import QGuiApplication
     from PySide2.QtCore import Qt
-    from PySide2.QtWidgets import QMenu, QAction
+    from PySide2.QtWidgets import QMenu, QAction, QTreeWidgetItemIterator
 else:
     from PySide6 import QtWidgets
     from PySide6.QtGui import QGuiApplication, QAction
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QMenu
+    from PySide6.QtWidgets import QMenu, QTreeWidgetItemIterator
 
 from sd.api.sdnode import SDNode
 from sd.api.apiexception import APIException
 from globalsearch.gsui.uiutil import GSUIUtil
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore.searchdata import SearchResultPathNode
-from globalsearch.gsui.prefs import GSUIPref
 from globalsearch.gscore import gslog
 
 class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
@@ -33,8 +32,9 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
     DM_TREE = 0
     DM_LIST = 1
 
-    def __init__(self, parent=None):
+    def __init__(self, gsuiMgr, parent=None):
         super().__init__(parent)
+        self.gsuiMgr = gsuiMgr
         self.searchResults = None
         self.setDisplayMode(self.__class__.DM_TREE)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -43,14 +43,14 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
 
     def idForPathNode(self, pathNode):
         sdNode = None
-        id = None
+        ident = None
         if pathNode.contextNode:
             sdNode = pathNode.contextNode
         elif isinstance(pathNode.sdObj, SDNode):
             sdNode = pathNode.sdObj
         if sdNode:
-            id = sdNode.getIdentifier()
-        return id
+            ident = sdNode.getIdentifier()
+        return ident
 
     def resetContextMenuBuffers(self):
         self.bufferedLocation = None
@@ -112,8 +112,8 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
                 action.triggered.connect(self.onCMCopyId)
 
         menu.addSection("Navigation")
-        # --- Jump to node
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            # --- Jump to node
             if self.bufferedPathNode:
                 sd_node = None
                 if self.bufferedPathNode.contextNode and isinstance(self.bufferedPathNode.contextNode, SDNode):
@@ -131,12 +131,17 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
                         action.triggered.connect(self.onCMJumpToNode)
                         menu.addAction(action)
 
-        # --- Show in Exporer
-        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
-            if self.bufferedPathNode:
-                if SDObj.isExporerNode(self.bufferedPathNode.subType):
+                # open graph or function
+                type = self.bufferedPathNode.sdObjType()
+                if SDObj.isGraph(type) or SDObj.isFunction(type):
+                    action = QAction("Open In Editor", self)
+                    action.triggered.connect(self.onCMOpenContainerInEditor)
+                    menu.addAction(action)
+
+                # --- Show in Explorer
+                if SDObj.isExplorerNode(self.bufferedPathNode.subType):
                     self.bufferedSDNode = self.bufferedPathNode.sdObj
-                    action = QAction("Show in Explorer", self)
+                    action = QAction("Show In Explorer", self)
                     action.triggered.connect(self.onCMShowInExplorer)
                     menu.addAction(action)
 
@@ -162,7 +167,7 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         if text and len(text) > 0:
             menuText = GSUIUtil.croppedText(text)
             self.textToCopyIntoClipboard = text
-            action = QAction(actionStr + " " + menuText, self)  
+            action = QAction(actionStr + ' "' + menuText + '"', self)  
             menu.addAction(action)
         return action
     
@@ -178,19 +183,37 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(self.bufferedId)
 
+    def openResourceInEditor(self, resource):
+        uiMgr = sd.getContext().getSDApplication().getUIMgr()
+        try:
+            gslog.info("Opening resource in editor for " + str(resource))
+            uiMgr.openResourceInEditor(resource)
+        except APIException as e:
+            gslog.error("Error opening graph " + str(resource) + ": " + str(e))
+            if self.bufferedPathNode:
+                self.bufferedPathNode.logPathNodeBranch()
+
     def onCMJumpToNode(self, checked):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
             if self.bufferedSDNode and self.bufferedParentGraph:
+                self.openResourceInEditor(self.bufferedParentGraph)                
                 try:
-                    uiMgr = sd.getContext().getSDApplication().getUIMgr()
-                    uiMgr.openResourceInEditor(self.bufferedParentGraph)
                     graphViewID = GSUIUtil.graphViewIDFromGraph(self.bufferedParentGraph)
+                    gslog.info("Getting ViewID for graph " + str(self.bufferedParentGraph) + " graphViewID="+str(graphViewID))
                     if graphViewID:
+                        uiMgr = sd.getContext().getSDApplication().getUIMgr()
                         uiMgr.focusGraphNode(graphViewID, self.bufferedSDNode)
                     else:
-                       gslog.log("Cannot find open graph for node " + str(self.bufferedSDNode))
+                        gslog.error("Cannot find open graph for node " + str(self.bufferedSDNode) + ". Parent graph: " + str(self.bufferedParentGraph))
+                        self.bufferedPathNode.logPathNodeBranch()
                 except APIException as e:
-                    gslog.log("Error focusing on node " + str(self.bufferedSDNode) + " in graph " + str(self.bufferedParentGraph) + ": " + str(e))
+                    gslog.error("Error focusing on node " + str(self.bufferedSDNode) + " in graph " + str(self.bufferedParentGraph) + ": " + str(e))
+                    self.bufferedPathNode.logPathNodeBranch()
+
+    def onCMOpenContainerInEditor(self, checked):
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if self.bufferedPathNode:
+                self.openResourceInEditor(self.bufferedPathNode.sdObj)
 
     def onCMShowInExplorer(self, checked):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
@@ -199,15 +222,13 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
                     uiMgr = sd.getContext().getSDApplication().getUIMgr()
                     uiMgr.setExplorerSelection(self.bufferedSDNode)
                 except APIException as e:
-                    gslog.log("Error selecting node in Explorer " + str(self.bufferedSDNode) + ": " + str(e))
+                    gslog.error("Error selecting node in Explorer " + str(self.bufferedSDNode) + ": " + str(e))
 
     def onCMSearchLocation(self, checked):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        GSUIManager.uiWidget.programmaticSearch(self.bufferedLocation)
+        self.gsuiMgr.uiWidget.programmaticSearch(self.bufferedLocation)
 
     def onCMSearchFound(self, checked):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        GSUIManager.uiWidget.programmaticSearch(self.bufferedFound)
+        self.gsuiMgr.uiWidget.programmaticSearch(self.bufferedFound)
 
     def setDisplayMode(self, displayMode):
         if displayMode == self.__class__.DM_TREE:
@@ -220,8 +241,7 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         self.setupDisplayMode(displayMode, headers, enableFlag)
 
     def updateFromPrefs(self):
-        from globalsearch.gsui.gsuimgr import GSUIManager
-        prefs = GSUIManager.prefs
+        prefs = self.gsuiMgr.prefs
         self.header().setSectionHidden(2, not prefs.sp_display_node_ids)
 
     def setupDisplayMode(self, displayMode, headers, enableFlag):
@@ -267,10 +287,29 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
                 
         self.header().resizeSections(QtWidgets.QHeaderView.ResizeToContents) # adapts headers to new context
 
+    # expand or collapse all tree items
+    def expandCollapseAllItems(self, expand = False, excludeRoot=True):
+        iter = QTreeWidgetItemIterator(self)
+        while iter.value():
+            treeItem = iter.value()
+            hasChildren = treeItem.childCount() > 0
+
+            if not (excludeRoot and treeItem.parent() is None):
+                if hasChildren:
+                    if expand:
+                        self.expandItem(treeItem)
+                    else:
+                        self.collapseItem(treeItem)
+
+            iter += 1
+
     # --- Tree display mode
 
     def populateFromPathNodeTreeDM(self, pathNode, parentItem = None):
-        uiTreeItem = self.createUITreeItemTreeDM(pathNode, parentItem)
+        if pathNode.subType == SDObj.ROOT:
+            uiTreeItem = None
+        else:
+            uiTreeItem = self.createUITreeItemTreeDM(pathNode, parentItem)
         for child in pathNode.children:
             self.populateFromPathNodeTreeDM(child, uiTreeItem)
 
@@ -294,6 +333,9 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         else:
             locationText = GSUIUtil.croppedText(pathNode.consolidatedName())   
             icon = GSUIUtil.iconForSDObj(type, self.__class__.ICON_HEIGHT)
+        
+        if len(locationText) == 0:
+            locationText = "(no name)"
 
         treeItem.setText(0, locationText)
         if icon:
@@ -320,9 +362,9 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
 
         # ID
         if pathNode.subType != SDObj.FUNC_PARAM:
-            id = self.idForPathNode(pathNode)
-            if id:
-                treeItem.setText(2, id)
+            ident = self.idForPathNode(pathNode)
+            if ident:
+                treeItem.setText(2, ident)
 
         return treeItem
 
@@ -339,13 +381,17 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         return s
 
     def populateFromPathNodeListDM(self, pathNode, nodeList):
-        if pathNode.hasFoundMatch():
-            self.createUITreeItemListDM(pathNode, nodeList)
+        if pathNode.subType != SDObj.ROOT:
+            if pathNode.hasFoundMatch():
+                self.createUITreeItemListDM(pathNode, nodeList)
 
-        nodeList.append(pathNode)
+            nodeList.append(pathNode)
+
         for child in pathNode.children:
             self.populateFromPathNodeListDM(child, nodeList)
-        nodeList.pop()
+
+        if pathNode.subType != SDObj.ROOT:
+            nodeList.pop()
 
     def createUITreeItemListDM(self, pathNode, nodeList):
         treeItem = QtWidgets.QTreeWidgetItem(self)
@@ -391,9 +437,9 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         treeItem.setText(1, context)
 
         # ID
-        id = self.idForPathNode(pathNode)
-        if id:
-            treeItem.setText(2, id)
+        ident = self.idForPathNode(pathNode)
+        if ident:
+            treeItem.setText(2, ident)
             
         # Path
         treeItem.setText(3, self.strFromNodeList(nodeList))

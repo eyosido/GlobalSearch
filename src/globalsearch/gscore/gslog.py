@@ -7,21 +7,22 @@ import logging
 import sd
 
 class GSLogger:
-    internal_instance = None
+    DEBUG = 0
+    INFO = 1
+    WARNING = 2 
+    ERROR = 3
 
     @classmethod
-    # simplified singleton
-    def instance(cls):
-        if cls.internal_instance == None:  
-            cls.internal_instance = GSLogger()
-        return cls.internal_instance
+    def classInit(cls):
+        global g_gslog
+        g_gslog = GSLogger()
+
+    def destroy(self):
+        if self.nativeLogger:
+            self.nativeLogger.removeHandler(self.handler)
+            self.nativeLogger = None
 
     @classmethod
-    def destroyLogger(cls):
-        if cls.internal_instance and cls.internal_instance.nativeLogger:
-            cls.internal_instance.nativeLogger.removeHandler(cls.internal_instance.handler)
-        cls.internal_instance = None
-
     def __init__(self):
         self.useNativeLogger = isinstance(sd.getContext().getLogger(), logging.Logger)
         self.nativeLogger = None
@@ -29,18 +30,46 @@ class GSLogger:
             self.nativeLogger = logging.getLogger("GlobalSearch")
             self.handler = sd.getContext().createRuntimeLogHandler()
             self.nativeLogger.addHandler(self.handler)
-            self.nativeLogger.setLevel(logging.INFO)
+            self.nativeLogger.setLevel(logging.DEBUG)
             self.nativeLogger.propagate = False
-
-    def log(self, msg):
+            self.log(self.INFO, "Using native logger")
+        else:
+            self.log(self.INFO, "Not using native logger")
+    
+    @classmethod
+    def log(self, level, msg):
         if self.useNativeLogger:
             # SD 2020 API
-            self.nativeLogger.info(msg)
+            if level == self.DEBUG:
+                self.nativeLogger.debug(msg)
+            elif level == self.INFO:
+                self.nativeLogger.info(msg)
+            elif level == self.WARNING:
+                self.nativeLogger.warning(msg)
+            elif level == self.ERROR:
+                self.nativeLogger.error(msg)
         else:
             # SD 2019 API
             from sd.logger import LogLevel
-            sd.getContext().getLogger().log(msg, LogLevel.Info, "GlobalSearch")
+            logger = sd.getContext().getLogger()
+            gs = "GlobalSearch"
+            if level == self.INFO or level == self.DEBUG:
+                logger.log(msg, LogLevel.Info, gs)
+            elif level == self.WARNING:
+                logger.log(msg, LogLevel.Warning, gs)
+            elif level == self.ERROR:
+                logger.log(msg, LogLevel.Error, gs)
 
-def log(msg):
-    GSLogger.instance().log(msg)
+def debug(msg):
+    g_gslog.log(GSLogger.DEBUG, '[DEBUG]' + msg)
+
+def info(msg):
+    g_gslog.log(GSLogger.INFO, msg)
+
+def warning(msg):
+    g_gslog.log(GSLogger.WARNING, '[WARNING]' + msg)
+
+def error(msg):
+    g_gslog.log(GSLogger.ERROR, '[ERROR]' +msg)
+
 

@@ -5,32 +5,17 @@
 
 import importlib
 
-import sd
-from sd.context import Context
-from sd.api.sdpackage import SDPackage
-from sd.api.sdarray import SDArray
-from sd.api.sdgraph import SDGraph
-from sd.api.sduimgr import SDUIMgr
-from sd.api.sdapplication import SDApplication
-from globalsearch.gscore import gslog
-from globalsearch.gscore import gs
-from globalsearch.gscore import sdobj
-from globalsearch.gscore import searchdata
-from globalsearch.gsui import gsuimgr
-from globalsearch.gsui import prefs
-from globalsearch.gsui import prefsdlg
-from globalsearch.gsui import resulttree
-from globalsearch.gsui import searchhistory
-from globalsearch.gsui import searchroottree
-from globalsearch.gsui import uiutil
+from globalsearch.gscore import gslog, gs, sdobj, searchdata
+from globalsearch.gsui import gsuimgr, gsuiwidget, prefs, prefsdlg, resulttree, searchhistory, searchroottree, uiutil
 
 def initializeSDPlugin():
-    # module reloads enable modifications without restarting the host, used for development only
+    # reload libs for development only
     importlib.reload(gslog)
     importlib.reload(gs)
     importlib.reload(sdobj)
     importlib.reload(searchdata)
     importlib.reload(gsuimgr)
+    importlib.reload(gsuiwidget)
     importlib.reload(prefs)
     importlib.reload(prefsdlg)
     importlib.reload(resulttree)
@@ -38,13 +23,15 @@ def initializeSDPlugin():
     importlib.reload(searchroottree)
     importlib.reload(uiutil)
 
-    gslog.GSLogger.instance().log(gsuimgr.GSUIManager.APPNAME + " starting")
-
-    gsuimgr.GSUIManager.instance()
+    gslog.GSLogger.classInit()
+    gsuimgr.GSUIManager.classInit()
+    gslog.info(gsuimgr.g_gsuimgr.APPNAME + " starting")
+    gsuimgr.g_gsuimgr.setupUI()
 
 def uninitializeSDPlugin():
-    gsuimgr.GSUIManager.instance().removeUI()
-    gsuimgr.GSUIManager.inst = None
-    gslog.log(gsuimgr.GSUIManager.APPNAME + " ending")
-    gslog.GSLogger.destroyLogger()
+    gslog.info(gsuimgr.GSUIManager.APPNAME + " ending")
+    gsuimgr.g_gsuimgr.removeUI()
+    gsuimgr.g_gsuimgr = None
+    gslog.info(gsuimgr.GSUIManager.APPNAME + " ended")
+    gslog.g_gslog.destroy()
 

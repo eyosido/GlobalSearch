@@ -61,7 +61,7 @@ class GSUIPref:
                 self.__dict__.update(j)
                 self.version = self.__class__.VERSION # force current version
             except:
-                gslog.log("Error loading preferences.")
+                gslog.error("Error loading preferences.")
 
     def save(self):
         path = self.__class__.filename()
@@ -69,7 +69,7 @@ class GSUIPref:
             with open(path, "w") as writeFile: 
                 json.dump(self.__dict__, writeFile)
         except:
-            gslog.log("Error saving preferences.")
+            gslog.error("Error saving preferences.")
 
     def toSearchCriteria(self):
         sc = SearchCriteria()

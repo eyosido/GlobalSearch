@@ -19,6 +19,7 @@ from sd.api.sdpackage import SDPackage
 from sd.api.sdgraph import SDGraph
 from sd.api.sdresourcefolder import SDResourceFolder
 
+from globalsearch.gscore import gslog
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gsui.uiutil import GSUIUtil
 
@@ -68,11 +69,15 @@ class GSUISearchRootTreeWidget(QtWidgets.QTreeWidget):
             if sdObj:
                 self.entryType,_ = SDObj.type(sdObj)
                 self.name = SDObj.name(sdObj, self.entryType)
+                # gslog.debug("CustomTreeData() sdObj="+str(sdObj) + " entryType="+str(self.entryType) + " name="+self.name)
             else:
                 self.entryType = SDObj.ROOT
                 self.name = "Everything (hit Refresh button to update)"
                
             self.sdObj = sdObj
+
+        def __str__(self):
+            return "entryType: " + str(self.entryType) + " name: " + self.name
 
     def setupTreeItemRoot(self):
         self.treeItemRoot = self.createUITreeItem(self.CustomTreeData())
@@ -133,7 +138,11 @@ class GSUISearchRootTreeWidget(QtWidgets.QTreeWidget):
         else:
             treeItem = QtWidgets.QTreeWidgetItem(self)
 
-        treeItem.setText(0, customTreeData.name)
+        text = customTreeData.name
+        if len(text) == 0:
+            text = "(no name)"
+            
+        treeItem.setText(0, text)
         icon = GSUIUtil.iconForSDObj(customTreeData.entryType, self.__class__.ICON_HEIGHT)
         if icon:
             treeItem.setIcon(0, icon)
