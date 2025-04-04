@@ -1,6 +1,6 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 import logging
@@ -17,12 +17,14 @@ class GSLogger:
         global g_gslog
         g_gslog = GSLogger()
 
-    def destroy(self):
-        if self.nativeLogger:
-            self.nativeLogger.removeHandler(self.handler)
-            self.nativeLogger = None
-
     @classmethod
+    def classDeinit(cls):
+        logger = globals()["g_gslog"]
+        if logger.nativeLogger:
+            logger.nativeLogger.removeHandler(logger.handler)
+            logger.nativeLogger = None
+        globals()["g_gslog"] = None
+
     def __init__(self):
         self.useNativeLogger = isinstance(sd.getContext().getLogger(), logging.Logger)
         self.nativeLogger = None
@@ -36,7 +38,6 @@ class GSLogger:
         else:
             self.log(self.INFO, "Not using native logger")
     
-    @classmethod
     def log(self, level, msg):
         if self.useNativeLogger:
             # SD 2020 API

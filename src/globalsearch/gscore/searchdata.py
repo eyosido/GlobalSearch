@@ -1,13 +1,50 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
+
+import json
+from json import JSONEncoder
 
 from sd.api.sdgraph import SDGraph
 from sd.api.sbs.sdsbsfxmapgraph import SDSBSFxMapGraph
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore import gslog
 from globalsearch.gscore.gslog import GSLogger
+
+# Used to tailor a search to a specific node type
+class NoteTypeFilterData:
+    # This represents either a system node (atomic, function) or library node.
+    # Fields definition and type are being used only for system nodes, and 
+    # identifier is used only for library nodes.
+    # label is being used by both types
+    def __init__(self, label, definition, type, identifier):
+        self.label = label
+        self.definition = definition
+        self.type = type
+        self.identifier = identifier
+
+    @classmethod
+    def fromSystem(cls, label, definition, type):
+        return NoteTypeFilterData(label, definition, type, None)
+    
+    @classmethod
+    def fromLibrary(cls, label, identifier):
+        return NoteTypeFilterData(label, None, None, identifier)
+
+    def isLibrary(self):
+        return self.identifier is not None
+    
+    def isSystem(self):
+        return self.definition is not None
+    
+    def __str__(self):
+        s = "  NoteTypeFilterData:\n"
+        s += "   label: " + self.label + "\n"    
+        s += "   definition: " + self.definition + "\n"    
+        s += "   type: " + str(self.type) + "\n"    
+        s += "   identifier: " + self.identifier
+        return s
 
 class SearchCriteria:
     """
@@ -18,9 +55,9 @@ class SearchCriteria:
 
         # search methods
         self.caseSensitive = False
-        self.naturalSearch = True  # Natural search is a "contains" search. If False, search with wildcards is enabled
-        self.enterGraphPkgFct = True # enter package functions called from graphs's function params
-        self.enterCustomSubGraphs = True # enter custom sub graphs found into the currently searched graph
+        self.wholeWord = False
+        self.enterGraphPkgFct = False # enter package functions called from graphs's function params
+        self.enterCustomSubGraphs = False # enter custom sub graphs found into the currently searched graph
 
         # filters
         self.varGetter = True  # variable, getter
@@ -31,6 +68,10 @@ class SearchCriteria:
         self.funcName = True # function id or label
         self.funcInput = True # function input param id or label
         self.comment = True # comment or frame
+
+        # Node type filter
+        self.graphNodeFilter = None # NoteTypeFilterData
+        self.functionNodeFilter = None # NoteTypeFilterData
 
         # special searches
         self.ss_param_func = False # return graph parameters to which are associated functions
@@ -45,9 +86,82 @@ class SearchCriteria:
         self.funcInput = enable
         self.comment = enable
 
+    def hasSearchString(self):
+        return self.searchString and len(self.searchString) > 0
+    
+    def hasNodeFilter(self):
+        return self.graphNodeFilter or self.functionNodeFilter    
+
+    def isGraphNodeFilterMatchingWithTypeAndRefRes(self, nodeType, refRes):
+        matching = False
+        isSystem = False
+        partialMatch = False # set to true when the node is not an actual match but its sub-nodes may be (i.e. looking for a Quadrant and we have an FX-Map, this is not an exact match but we need to dig into the FX-Map to find the Quadrant)
+        if self.graphNodeFilter:
+            if self.graphNodeFilter.isSystem():
+                isSystem = True
+                matching = nodeType == self.graphNodeFilter.type
+                if not matching:
+                    # check for partial match
+                    if self.graphNodeFilter.type == SDObj.FX_MAP:
+                        # Special case: if graph node filter is FX-Map are we're on an FX-Map node (Quadrant, Switch etc.), then it's a match as we don't need to descend into the FX-Map node (so not partial match)
+                        matching = SDObj.isFXMapNode(nodeType)
+                    elif SDObj.isFXMapNode(self.graphNodeFilter.type):
+                        # Special case: if graph node filter is an FX-Map node (Quadrant etc.) and we're on an FX-Map, this is a partial match so we can enter the FX-Map
+                        partialMatch = nodeType == SDObj.FX_MAP
+            elif refRes and isinstance(refRes, SDGraph):
+                graph_id = refRes.getIdentifier()
+                matching = graph_id == self.graphNodeFilter.identifier
+        return matching, partialMatch, isSystem
+
+    def isGraphNodeFilterMatching(self, sdNode):
+        nodeType, _ = SDObj.type(sdNode)   
+        refRes = sdNode.getReferencedResource()
+        matching, _, _ = self.isGraphNodeFilterMatchingWithTypeAndRefRes(nodeType, refRes)  
+        return matching
+
+    def isFunctionNodeFilterMatchingForDef(self, definitionId):
+        matching = False
+        if self.functionNodeFilter:
+            matching = definitionId == self.functionNodeFilter.definition
+        return matching
+
+    def isFunctionNodeFilterMatching(self, sdNode):
+        return self.isFunctionNodeFilterMatchingForDef(sdNode.getDefinition().getId())
+
     def setupForSSParamFunc(self):
         self.ss_param_func = True
         self.enableFilters(False)
+
+    def __str__(self):
+        s = "SearchCriteria:\n"
+        s += "searchString: " + self.searchString + "\n"
+
+        s += "caseSensitive: " + str(self.caseSensitive) + "\n"
+        s += "wholeWord: " + str(self.wholeWord) + "\n"
+        s += "enterGraphPkgFct: " + str(self.enterGraphPkgFct) + "\n"
+        s += "enterCustomSubGraphs: " + str(self.enterCustomSubGraphs) + "\n"
+
+        s += "varGetter: " + str(self.varGetter) + "\n"
+        s += "varSetter: " + str(self.varSetter) + "\n"
+        s += "folderId: " + str(self.folderId) + "\n"
+        s += "graphName: " + str(self.graphName) + "\n"
+        s += "graphParamFunc: " + str(self.graphParamFunc) + "\n"
+        s += "funcName: " + str(self.funcName) + "\n"
+        s += "funcInput: " + str(self.funcInput) + "\n"
+        s += "comment: " + str(self.comment) + "\n"
+
+        if self.graphNodeFilter:
+            s += "Graph node filter:\n" + str(self.graphNodeFilter) + "\n"
+        else:
+            s += "No graph node filter\n"
+
+        if self.functionNodeFilter:
+            s += "Function node filter:\n" + str(self.functionNodeFilter) + "\n"
+        else:
+            s += "No function node filter\n"
+
+        s += "ss_param_func: " + str(self.ss_param_func)
+        return s
 
 class SearchResultPathNode:
     """
@@ -90,7 +204,7 @@ class SearchResultPathNode:
         return type
 
     def consolidatedName(self):
-        type,_ = self.consolidatedType()
+        type, typeStr = self.consolidatedType()
         # if self.hasName():
         #     gslog.debug("consolidatedName() hasName " + self.name)
         #     return self.name
@@ -98,7 +212,10 @@ class SearchResultPathNode:
         #     gslog.debug("consolidatedName() not hasName " + SDObj.name(self.sdObj, type))
         #     return SDObj.name(self.sdObj, type)
         
-        return self.name if self.hasName() else SDObj.name(self.sdObj, type)
+        name = self.name if self.hasName() else SDObj.name(self.sdObj, type)
+        if not name or len(name)==0:
+            name = typeStr
+        return name
 
     def consolidatedType(self):
         if self.subType != SDObj.UNDEFINED:
@@ -129,7 +246,7 @@ class SearchResultPathNode:
             match = self.foundMatch if self.foundMatch else ""
             s += " - Match: " + match
         return s
-
+    
     def __str__(self):
         return self.dumpStr()
     
@@ -140,6 +257,26 @@ class SearchResultPathNode:
         while p:
             gslog.info(p.dumpStr(dump_match=False, use_indent=False))
             p = p.parent
+
+# this is used for unit tests in order to make test results serializable
+class SearchResultPathNodeJSONEncoder(JSONEncoder):
+    def default(self, pathNode):
+        type, typeStr = SDObj.type(pathNode.sdObj)
+        name = pathNode.name if pathNode.name and len(pathNode.name) > 0 else SDObj.name(pathNode.sdObj, type)
+        foundMatch = pathNode.foundMatch
+        children = None
+        if pathNode.children and len(pathNode.children) > 0:
+            children = []
+            for c in pathNode.children:
+                children.append(self.default(c))
+
+        result = {"type":typeStr, "name":name}
+        if foundMatch:
+            result["foundMatch"] = foundMatch
+        if children:
+            result["children"] = children
+
+        return result
 
 class SearchResults:
     """
@@ -167,7 +304,7 @@ class SearchResults:
     # --- Path tree operations
     def appendPathNode(self, sdObj, foundMatchStr = None, isFoundMatch = False, assignToCurrent = True):
         # we are using both foundMatchStr and isFoundMatch as for presets foundMatchStr can be empty
-        logSearchStr = "appendPathNode: " + SDObj.dumpStr(sdObj)
+        logSearchStr = "appendPathNode: " + SDObj.dumpStr(sdObj) + " isFoundMatch=" + str(isFoundMatch) + " assignToCurrent="+str(assignToCurrent)
 
         newPathNode = SearchResultPathNode(sdObj, foundMatchStr, self.pathTree)
         if not self.pathTree:

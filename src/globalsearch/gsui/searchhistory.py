@@ -1,6 +1,6 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 import os, json
@@ -29,7 +29,7 @@ class GSUISearchHistory:
         self.callback = callback
         self.maxCount = maxCount # max item count in history
         self.history = []   # found searches without duplicates, persistent
-        self.navigation = []  # found searches in the order they are made, duplicates possible, not persistent  
+        self.navigation = []  # found searches in the order they are made, duplicates possible, not persistent, content {'text':<text string>, 'preset':<GSPresetTypes>}
         self.nav_index = 0  # current position in self.navigation to enable prev/next
 
     def count(self):
@@ -105,14 +105,17 @@ class GSUISearchHistory:
             except:
                 gslog.error("Error deleting search history file.")
 
-    def nav_append(self, text):
-        gslog.debug("nav_append "+ text)
-        self.navigation.append(text)
+    def nav_item(self, text, preset, nt_filter_index, func_nt_filter_index):
+        return {'text':text, 'preset':preset, 'ntfi':nt_filter_index, 'fntfi':func_nt_filter_index}
+
+    def nav_append(self, text, preset, nt_filter_index, func_nt_filter_index):
+        # gslog.debug("nav_append "+ text + " preset="+str(preset))
+        self.navigation.append(self.nav_item(text, preset, nt_filter_index, func_nt_filter_index))
         if len(self.navigation) > self.DEFAULT_MAX_SEARCH_NAVIGATION_COUNT:
             self.navigation.pop(0)  # remove first item
 
         self.nav_index = len(self.navigation) - 1
-        self.logNav()
+        # self.logNav()
 
     def nav_has_next(self):
         b = self.nav_index < len(self.navigation)-1
@@ -123,32 +126,32 @@ class GSUISearchHistory:
         return b
 
     def nav_next(self):
-        text = None
+        item = None
         if self.nav_has_next():
             self.nav_index += 1
-            text = self.navigation[self.nav_index]
-        gslog.debug("nav_next ->"+ text)
-        self.logNav()
-        return text
+            item = self.navigation[self.nav_index]
+        # gslog.debug("nav_next ->"+ str(item))
+        # self.logNav()
+        return item
 
     def nav_prev(self):
-        text = None
+        item = None
         if self.nav_has_prev():
             self.nav_index -= 1
-            text = self.navigation[self.nav_index]
-        gslog.debug("nav_prev ->"+ text)
-        self.logNav()
-        return text
+            item = self.navigation[self.nav_index]
+        # gslog.debug("nav_prev ->"+ str(item))
+        # self.logNav()
+        return item
     
-    def logNav(self):
-        s = ""
-        i=0
-        for n in self.navigation:
-            if len(s)>0:
-                s+=', '
-            s += str(i) + ': ' + n
-            i += 1
-        gslog.debug('Nav list:' + s)
-        gslog.debug('Nav index: ' + str(self.nav_index))
+    # def logNav(self):
+    #     s = ""
+    #     i=0
+    #     for n in self.navigation:
+    #         if len(s)>0:
+    #             s+=', '
+    #         s += str(i) + ': ' + n
+    #         i += 1
+    #     gslog.debug('Nav list:' + s)
+    #     gslog.debug('Nav index: ' + str(self.nav_index))
 
 

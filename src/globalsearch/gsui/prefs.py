@@ -1,12 +1,11 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 import os
 import json
 
-from globalsearch.gscore import gs
 from globalsearch.gscore import gslog
 from globalsearch.gscore.searchdata import SearchCriteria
 
@@ -17,21 +16,26 @@ class GSUIPref:
 
     """
     Preferences file format versions:
-    3: added sp_display_node_ids
+    4: removed sp_naturalSearch, added sp_wholeWord, dev_unitTests, dev_searchLogs
+    3: added sp_displayNodeIds
     2: added sc_GraphParamFunc
-    1.0: initial version
+    1: initial version
     """
-    VERSION = "3"
+    VERSION = "4"
     
     def __init__(self):
         self.setupDefaults()
+        self.path = self.__class__.filename()
         self.load()
+        if not os.path.exists(self.path):
+            self.save()
      
     def setupDefaults(self):
         self.version = self.__class__.VERSION
         self.sc_GraphName = True
         self.sc_FolderName = True
         self.sc_Comment = True
+        self.sc_DisplayNodeTypeFilters = True
         self.sc_FuncName = True
         self.sc_FuncInputParam = True
         self.sc_FuncGetter = True
@@ -40,11 +44,15 @@ class GSUIPref:
 
         self.sh_enable = True 
 
-        self.sp_naturalSearch = True
         self.sp_caseSensitive = False
+        self.sp_wholeWord = False
         self.sp_enterGraphPkgFct = False
         self.sp_enterCustomSubGraphs = False
-        self.sp_display_node_ids = True
+        self.sp_displayNodeIds = True
+        
+        # development only, not visible in the UI
+        self.dev_unitTests = False # enables unit test menus
+        self.dev_searchLogs = False # detailed logs during a search
         
     @classmethod
     def filename(cls):
@@ -53,10 +61,9 @@ class GSUIPref:
         return path
 
     def load(self):
-        path = self.__class__.filename()
-        if os.path.exists(path):
+        if os.path.exists(self.path):
             try:
-                with open(path, "r") as readFile:
+                with open(self.path, "r") as readFile:
                     j = json.load(readFile)
                 self.__dict__.update(j)
                 self.version = self.__class__.VERSION # force current version
@@ -64,9 +71,8 @@ class GSUIPref:
                 gslog.error("Error loading preferences.")
 
     def save(self):
-        path = self.__class__.filename()
         try:
-            with open(path, "w") as writeFile: 
+            with open(self.path, "w") as writeFile: 
                 json.dump(self.__dict__, writeFile)
         except:
             gslog.error("Error saving preferences.")
@@ -74,8 +80,8 @@ class GSUIPref:
     def toSearchCriteria(self):
         sc = SearchCriteria()
 
-        sc.caseSensisitve = self.sp_caseSensitive
-        sc.naturalSearch = self.sp_naturalSearch
+        sc.caseSensitive = self.sp_caseSensitive
+        sc.wholeWord = self.sp_wholeWord
         sc.enterGraphPkgFct = self.sp_enterGraphPkgFct
         sc.enterCustomSubGraphs = self.sp_enterCustomSubGraphs
 

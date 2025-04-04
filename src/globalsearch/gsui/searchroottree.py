@@ -1,6 +1,6 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 from pathlib import Path
@@ -8,11 +8,11 @@ from pathlib import Path
 import sd
 if sd.getContext().getSDApplication().getVersion() < "14.0.0":
     from PySide2 import QtWidgets
-    from PySide2.QtCore import Signal
+    from PySide2.QtCore import QEvent
     from PySide2.QtWidgets import QTreeWidgetItemIterator, QSizePolicy
 else:
     from PySide6 import QtWidgets
-    from PySide6.QtCore import Signal
+    from PySide6.QtCore import QEvent
     from PySide6.QtWidgets import QTreeWidgetItemIterator, QSizePolicy
 
 from sd.api.sdpackage import SDPackage
@@ -26,24 +26,22 @@ from globalsearch.gsui.uiutil import GSUIUtil
 class GSUISearchRootTreeWidget(QtWidgets.QTreeWidget):
     """
     Tree view widget displaying potential search roots
-    """
-    searchRootChanged = Signal(int)
-    
+    """    
     MAX_VISIBLE_ITEM_COUNT = 20
     ICON_HEIGHT = 18
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.resetData()
+        self.setHeaderHidden(True)
+
+    def resetData(self):
         self.treeItemRoot = None
         self.treeMapping = {} # dictionnary mapping tree QTreeWidgetItem and CustomTreeData. Key:id(treeItem), value:CustomTreeData 
         self.isExpandCollapse = False
-        self.setHeaderHidden(True)
-        self.itemCollapsed.connect(self.onItemCollapsed)
-        self.itemExpanded.connect(self.onItemExpanded)
-        self.itemClicked.connect(self.onItemClicked)
 
-    # --- Public
     def populate(self):
+        self.resetData()
         self.clear()
         self.setupTreeItemRoot()
         ctx = sd.getContext()
@@ -53,17 +51,6 @@ class GSUISearchRootTreeWidget(QtWidgets.QTreeWidget):
             pkg = packages.getItem(p)
             self.populateFromPackage(pkg, self.treeItemRoot)
 
-    # --- slots    
-    def onItemCollapsed(self, item):
-        self.expandedOrCollapsed(item)
-
-    def onItemExpanded(self, item):
-        self.expandedOrCollapsed(item)
-
-    def onItemClicked(self, item):
-        self.searchRootChanged.emit(item)
-
-    # --- Private
     class CustomTreeData():
         def __init__(self, sdObj = None):
             if sdObj:
@@ -78,7 +65,7 @@ class GSUISearchRootTreeWidget(QtWidgets.QTreeWidget):
 
         def __str__(self):
             return "entryType: " + str(self.entryType) + " name: " + self.name
-
+    
     def setupTreeItemRoot(self):
         self.treeItemRoot = self.createUITreeItem(self.CustomTreeData())
 
@@ -164,30 +151,44 @@ class GSUIComboTreeWidget(QtWidgets.QComboBox):
     """
     A combo box displaying a tree view as dropdown popup
     """
-    doActivate = Signal(int)
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.treeWidget = GSUISearchRootTreeWidget(self)
         self.treeWidget.populate()
         self.setModel(self.treeWidget.model())
         self.setView(self.treeWidget)
-        self.activated.connect(self.onActivated) #custom signal to be able to send the system's activate signal
         self.setCurrentIndex(0)
         self.setMaxVisibleItems(GSUISearchRootTreeWidget.MAX_VISIBLE_ITEM_COUNT)
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.lastSelectedItem = None # we keep track of last selected item because getCurrentItem() is not reliable in our tree view, the current item sometimes doesn't get set properly on expanded/collapsed items
+        self.treeWidget.viewport().installEventFilter(self)
     
-    def onActivated(self, index):
-        pass
-
     def reload(self):
         self.clear()
         self.treeWidget.populate()
+        self.lastSelectedItem = None
     
     def hidePopup(self):
         if not self.treeWidget.isExpandCollapse:
             super().hidePopup()
-        else:
-            # prevent popup from closing by not calling base class implementation
-            self.doActivate.emit(0)
         self.treeWidget.isExpandCollapse = False
+
+    # This event filter helps to workaround issues with the combo popup closing unexpectidly while trying to expand/collapse nodes:
+    # We handle the expand/collapse manually and ignore the default hidePopup() (see override) when expand or collapse is being made
+    def eventFilter(self, obj, event):
+        if obj == self.treeWidget.viewport():
+            if event.type() == QEvent.MouseButtonPress:
+                index = self.treeWidget.indexAt(event.pos())
+                if index.isValid():
+                    tree_item = self.treeWidget.itemFromIndex(index)
+                    if tree_item.childCount() > 0:
+                        if self.treeWidget.isExpanded(index):
+                            self.treeWidget.collapse(index)
+                        else:
+                            self.treeWidget.expand(index)
+                        self.treeWidget.expandedOrCollapsed(tree_item)
+                        self.lastSelectedItem = tree_item            
+                        return True
+                    
+                    self.lastSelectedItem = tree_item                    
+        return super().eventFilter(obj, event)     

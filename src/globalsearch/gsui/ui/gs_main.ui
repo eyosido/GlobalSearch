@@ -125,6 +125,42 @@
       </layout>
      </item>
      <item>
+        <layout class="QHBoxLayout" name="hl_search_type">
+            <item>
+                <widget class="QComboBox" name="cb_graph_node_type">
+                    <property name="toolTip">
+                       <string>Filters by graph node type</string>
+                    </property>
+                    <property name="editable">
+                        <bool>false</bool>
+                    </property>
+                    <property name="insertPolicy">
+                        <enum>QComboBox::NoInsert</enum>
+                    </property>
+                    <property name="frame">
+                        <bool>true</bool>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QComboBox" name="cb_fct_node_type">
+                    <property name="toolTip">
+                       <string>Filters by function node type</string>
+                    </property>
+                    <property name="editable">
+                        <bool>false</bool>
+                    </property>
+                    <property name="insertPolicy">
+                        <enum>QComboBox::NoInsert</enum>
+                    </property>
+                    <property name="frame">
+                        <bool>true</bool>
+                    </property>
+                </widget>
+            </item>
+        </layout>
+     </item>
+     <item>
       <widget class="Line" name="line">
        <property name="frameShadow">
         <enum>QFrame::Sunken</enum>
@@ -141,14 +177,58 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="l_status">
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="text">
-        <string>&lt;status&gt;</string>
-       </property>
-      </widget>
+        <layout class="QHBoxLayout" name="hl_found">
+            <item>
+                <widget class="QLabel" name="l_status">
+                    <property name="frameShape">
+                        <enum>QFrame::NoFrame</enum>
+                    </property>
+                    <property name="text">
+                        <string>&lt;status&gt;</string>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QToolButton" name="btn_prev_sr">
+                    <property name="toolTip">
+                        <string>Previous Search Result</string>
+                    </property>
+                    <property name="text">
+                        <string>...</string>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QToolButton" name="btn_next_sr">
+                    <property name="toolTip">
+                        <string>Next Search Result</string>
+                    </property>
+                    <property name="text">
+                        <string>...</string>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QToolButton" name="btn_focus_sr">
+                    <property name="toolTip">
+                        <string>Open/show in Graph View the previous/next search result</string>
+                    </property>
+                    <property name="text">
+                        <string>...</string>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QToolButton" name="btn_save_sr">
+                    <property name="toolTip">
+                        <string>Save search result to file</string>
+                    </property>
+                    <property name="text">
+                        <string>...</string>
+                    </property>
+                </widget>
+            </item>
+        </layout>
      </item>
     </layout>
    </item>

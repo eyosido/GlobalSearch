@@ -1,5 +1,8 @@
 .env 
 
+# Designer autosave folder
+.autosave/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

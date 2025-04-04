@@ -1,6 +1,6 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 import sd, sys
@@ -8,16 +8,16 @@ if sd.getContext().getSDApplication().getVersion() < "14.0.0":
     from PySide2 import QtWidgets
     from PySide2.QtGui import QGuiApplication
     from PySide2.QtCore import Qt
-    from PySide2.QtWidgets import QMenu, QAction, QTreeWidgetItemIterator
+    from PySide2.QtWidgets import QMenu, QAction, QTreeWidgetItemIterator, QMessageBox
 else:
     from PySide6 import QtWidgets
     from PySide6.QtGui import QGuiApplication, QAction
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QMenu, QTreeWidgetItemIterator
+    from PySide6.QtWidgets import QMenu, QTreeWidgetItemIterator, QMessageBox
 
 from sd.api.sdnode import SDNode
-from sd.api.sdgraph import SDGraph
 from sd.api.apiexception import APIException
+from sd.api.sdapiobject import SDApiError
 from globalsearch.gsui.uiutil import GSUIUtil
 from globalsearch.gscore.sdobj import SDObj
 from globalsearch.gscore.searchdata import SearchResultPathNode
@@ -37,10 +37,14 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         super().__init__(parent)
         self.gsuiMgr = gsuiMgr
         self.searchResults = None
+        self.rootCount = 0
         self.setDisplayMode(self.__class__.DM_TREE)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenu)
         self.resetContextMenuBuffers()
+
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            self.itemDoubleClicked.connect(self.onItemDoubleClicked)   
 
     def idForPathNode(self, pathNode):
         sdNode = None
@@ -68,6 +72,11 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         self.resetContextMenuBuffers()
         pathNode = treeItem.data(0, Qt.UserRole)
         self.bufferedPathNode = pathNode
+
+        # check if selected is still valid
+        if not self.isObjectValid(pathNode.sdObj):
+            QMessageBox.warning(self, self.gsuiMgr.APPNAME, "This object does not exist anymore.")
+            return
 
         # --- gather text items
 
@@ -116,25 +125,16 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
             # --- Jump to node
             if self.bufferedPathNode:
-                sd_node = None
-                if self.bufferedPathNode.contextNode and isinstance(self.bufferedPathNode.contextNode, SDNode):
-                    sd_node = self.bufferedPathNode.contextNode # for comments
-                elif self.bufferedPathNode.sdObj and isinstance(self.bufferedPathNode.sdObj, SDNode):
-                    sd_node = self.bufferedPathNode.sdObj
-                
-                if sd_node:
-                    self.bufferedSDNode = sd_node
-                    parentGraphPN = self.bufferedPathNode.getParentGraphPathNode()
-                    if parentGraphPN:
-                        self.bufferedParentGraph = parentGraphPN.sdObj
-
-                        action = QAction("Show in Graph View", self)
-                        action.triggered.connect(self.onCMJumpToNode)
-                        menu.addAction(action)
+                sdNode, sdParentGraph = self.nodeForShowing(self.bufferedPathNode)
+                if sdNode and sdParentGraph:
+                    self.bufferedSDNode = sdNode
+                    self.bufferedParentGraph = sdParentGraph
+                    action = QAction("Show in Graph View", self)
+                    action.triggered.connect(self.onCMJumpToNode)
+                    menu.addAction(action)
 
                 # open graph or function
-                type = self.bufferedPathNode.sdObjType()
-                if SDObj.isGraph(type) or SDObj.isFunction(type):
+                if self.containerForOpening(self.bufferedPathNode):
                     action = QAction("Open In Editor", self)
                     action.triggered.connect(self.onCMOpenContainerInEditor)
                     menu.addAction(action)
@@ -163,6 +163,45 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
 
         menu.exec_(self.mapToGlobal(pos))
 
+    # given a pathNode, check if it can be shown in a graph view. If so, returns the sdNode and its parent graph
+    def nodeForShowing(self, pathNode):
+        sdNode = None
+        sdParentGraph = None
+        if pathNode.contextNode and isinstance(pathNode.contextNode, SDNode):
+            sdNode = pathNode.contextNode # for comments
+        elif pathNode.sdObj and isinstance(pathNode.sdObj, SDNode):
+            sdNode = pathNode.sdObj
+        
+        if sdNode:
+            self.bufferedSDNode = sdNode
+            parentGraphPN = pathNode.getParentGraphPathNode()
+            if parentGraphPN:
+                sdParentGraph = parentGraphPN.sdObj
+
+        return (sdNode, sdParentGraph)
+    
+    # given a pathNode, check if it can be opened as a graph, if so return the sd graph
+    def containerForOpening(self, pathNode):
+        sdContainer = None
+        type = pathNode.sdObjType()
+        if SDObj.isGraph(type) or SDObj.isFunction(type):
+            sdContainer = pathNode.sdObj
+        return sdContainer
+    
+    def openOrFocusOnItemIfPossible(self, item):
+        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
+            if item and item.childCount() == 0: # check if leaf
+                pathNode = item.data(0, Qt.UserRole)
+                sdNode, sdParentGraph = self.nodeForShowing(pathNode)
+                if sdNode and sdParentGraph:
+                    self.jumpToNode(sdNode, sdParentGraph, pathNode)
+                else:
+                    if self.containerForOpening(pathNode):
+                        self.openContainerInEditor(pathNode)
+
+    def onItemDoubleClicked(self, item, column):
+        self.openOrFocusOnItemIfPossible(item)
+
     def createContextMenuItemForTextAtColumn(self, menu, actionStr, text):
         action = None
         if text and len(text) > 0:
@@ -184,38 +223,68 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(self.bufferedId)
 
-    def openResourceInEditor(self, resource):
+    def isObjectValid(self, obj):
+        valid = True
+        try:
+            if isinstance(obj, SDNode):
+                if obj.getDefinition() is None:
+                    raise APIException(SDApiError(SDApiError.Undefined))
+            elif hasattr(obj, 'getFilePath') and callable(obj.getFilePath): # SDResource, SDPackage
+                    obj.getFilePath() # raises an exception if object has been deleted
+        except APIException as e:
+            valid = False
+        return valid
+            
+    def openResourceInEditor(self, resource, pathNode):
         uiMgr = sd.getContext().getSDApplication().getUIMgr()
         try:
             gslog.info("Opening resource in editor for " + str(resource))
             uiMgr.openResourceInEditor(resource)
         except APIException as e:
             gslog.error("Error opening graph " + str(resource) + ": " + str(e))
-            if self.bufferedPathNode:
-                self.bufferedPathNode.logPathNodeBranch()
-
-    def onCMJumpToNode(self, checked):
-        if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
-            if self.bufferedSDNode and self.bufferedParentGraph:
-                self.openResourceInEditor(self.bufferedParentGraph)                
+            if pathNode:
                 try:
-                    graphViewID = GSUIUtil.graphViewIDFromGraph(self.bufferedParentGraph)
-                    gslog.info("Getting ViewID for graph " + str(self.bufferedParentGraph) + " graphViewID="+str(graphViewID))
-                    if graphViewID:
-                        uiMgr = sd.getContext().getSDApplication().getUIMgr()
-                        uiMgr.focusGraphNode(graphViewID, self.bufferedSDNode)
-                    else:
-                        gslog.error("Cannot find open graph for node " + str(self.bufferedSDNode) + ". Parent graph: " + str(self.bufferedParentGraph))
-                        self.bufferedPathNode.logPathNodeBranch()
-                except APIException as e:
-                    gslog.error("Error focusing on node " + str(self.bufferedSDNode) + " in graph " + str(self.bufferedParentGraph) + ": " + str(e))
-                    self.bufferedPathNode.logPathNodeBranch()
+                    pathNode.logPathNodeBranch()
+                except APIException as ee:
+                    pass # exception may be raised if objects along the path do not exist anymore
+
+    def openContainerInEditor(self, pathNode):
+        if pathNode:
+            obj = pathNode.referencedRes if pathNode.referencedRes else pathNode.sdObj
+            if self.isObjectValid(obj):
+                self.openResourceInEditor(obj, pathNode)
+            else:
+                gslog.warning("Attempt to open in editor an object does not exist anymore.")
+                QMessageBox.warning(self, self.gsuiMgr.APPNAME, "This object does not exist anymore.")
 
     def onCMOpenContainerInEditor(self, checked):
+        self.openContainerInEditor(self.bufferedPathNode)
+
+    def jumpToNode(self, sdNode, sdParentGraph, pathNode):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
-            if self.bufferedPathNode:
-                obj = self.bufferedPathNode.referencedRes if self.bufferedPathNode.referencedRes else self.bufferedPathNode.sdObj
-                self.openResourceInEditor(obj)
+            if sdNode and sdParentGraph:
+                if self.isObjectValid(sdParentGraph):
+                    self.openResourceInEditor(sdParentGraph, pathNode)              
+                else:
+                    gslog.warning("Attempt to open in editor an graph does not exist anymore.")
+                    QMessageBox.warning(self, self.gsuiMgr.APPNAME, "Parent graph for this object does not exist anymore.")
+                    return
+                try:
+                    graphViewID = GSUIUtil.graphViewIDFromGraph(sdParentGraph)
+                    gslog.info("Getting ViewID for graph " + str(sdParentGraph) + " graphViewID="+str(graphViewID))
+                    if graphViewID:
+                        uiMgr = sd.getContext().getSDApplication().getUIMgr()
+                        gslog.info("Focusing on graph node " + str(sdNode) + " in graphViewID="+str(graphViewID))
+                        uiMgr.focusGraphNode(graphViewID, sdNode)
+                    else:
+                        gslog.error("Cannot find open graph for node " + str(sdNode) + ". Parent graph: " + str(sdParentGraph))
+                        pathNode.logPathNodeBranch()
+                except APIException as e:
+                    gslog.error("Error focusing on node " + str(sdNode) + " in graph " + str(sdParentGraph) + ": " + str(e))
+                    pathNode.logPathNodeBranch()
+
+    def onCMJumpToNode(self, checked):
+        self.jumpToNode(self.bufferedSDNode, self.bufferedParentGraph, self.bufferedPathNode)
 
     def onCMShowInExplorer(self, checked):
         if sd.getContext().getSDApplication().getVersion() >= "14.0.0":
@@ -244,7 +313,7 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
 
     def updateFromPrefs(self):
         prefs = self.gsuiMgr.prefs
-        self.header().setSectionHidden(2, not prefs.sp_display_node_ids)
+        self.header().setSectionHidden(2, not prefs.sp_displayNodeIds)
 
     def setupDisplayMode(self, displayMode, headers, enableFlag):
         header = self.header()
@@ -265,6 +334,7 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
     def clearAll(self):
         self.clear()
         self.searchResults = None
+        self.rootCount = 0
 
     def setHeaderResizeMode(self, resizeMode):
         header = self.header()
@@ -288,6 +358,17 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
                 self.populateFromPathNodeListDM(pathNode, nodeList)
                 
         self.header().resizeSections(QtWidgets.QHeaderView.ResizeToContents) # adapts headers to new context
+        self.rootCount = self.countRoots()
+
+    def countRoots(self):
+        iter = QTreeWidgetItemIterator(self)
+        root_count = 0
+        while iter.value():
+            treeItem = iter.value()
+            if treeItem.parent() is None:
+                root_count += 1
+            iter += 1
+        return root_count
 
     # expand or collapse all tree items
     def expandCollapseAllItems(self, expand = False, excludeRoot=True):
@@ -296,7 +377,8 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
             treeItem = iter.value()
             hasChildren = treeItem.childCount() > 0
 
-            if not (excludeRoot and treeItem.parent() is None):
+            # we do not collapse the root of a tree having a single root (for reasability) excludeRoot if True
+            if not (excludeRoot and (treeItem.parent() is None) and (self.rootCount == 1) and not expand):
                 if hasChildren:
                     if expand:
                         self.expandItem(treeItem)
@@ -446,3 +528,56 @@ class GSUISearchResultTreeWidget(QtWidgets.QTreeWidget):
         # Path
         treeItem.setText(3, self.strFromNodeList(nodeList))
         return treeItem
+    
+    def hasSearchResults(self):
+        return self.topLevelItemCount() > 0
+
+    # returns the item in tree having a found match following or preceding item
+    def navFoundItem(self, next, item):
+        if item:
+            iter = QTreeWidgetItemIterator(item)
+            cur_item = iter.value()            
+            while cur_item: # this loop won't go infinite as there always is at least one found match
+                if next:
+                    iter += 1
+                    if iter.value() is None:
+                        iter = QTreeWidgetItemIterator(self.navFirstTreeItem()) # cycle to top item
+                else:
+                    iter -= 1
+                    if iter.value() is None:
+                        iter = QTreeWidgetItemIterator(self.navLastTreeItem()) # cycle to last item
+
+                cur_item = iter.value()
+                if cur_item:
+                    if self.navIsFoundItem(cur_item):
+                        return cur_item
+        return None
+    
+    def navIsFoundItem(self, item):
+        if item:
+            pathNode = item.data(0, Qt.UserRole)
+            # Note: nodes found by node type filetering only (i.e. no search string) have foundMatch set to "" (=match without using string) which differenciates them from None (=no match)
+            if pathNode.foundMatch is not None:
+                return True
+        return False
+    
+    def navNextFoundItem(self):
+        return self.navFoundItem(next=True)
+                    
+    def navPrevFoundItem(self):
+        return self.navFoundItem(next=False)
+    
+    def navFirstTreeItem(self):
+        return QTreeWidgetItemIterator(self).value()
+    
+    def navLastTreeItem(self):
+        iter = QTreeWidgetItemIterator(self)
+        item = None
+        while iter.value():
+            item = iter.value()            
+            iter += 1
+        return item
+
+
+    
+

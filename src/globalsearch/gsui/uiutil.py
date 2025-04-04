@@ -1,6 +1,6 @@
 # ---------------
 # Global Search - Substance 3D Designer plugin
-# (c) 2019-2022 Eyosido Software SARL
+# (c) 2019-2025 Eyosido Software SARL
 # ---------------
 
 import os
@@ -31,6 +31,7 @@ class GSUIUtil:
         SDObj.FOLDER: "gs_folder.png",
         SDObj.FUNCTION: "gs_function.png",
         SDObj.COMMENT: "gs_comment.png",
+        SDObj.PIN: "gs_pin.png",
         SDObj.FRAME: "gs_frame.png",
         SDObj.FNODE_GET: "gs_func_get.png",
         SDObj.FNODE_SET: "gs_func_set.png",
@@ -74,15 +75,15 @@ class GSUIUtil:
         return icon
 
     @classmethod
-    def croppedText(cls, text, maxLen = 50):
-        if text and len(text) > maxLen:
-            finalText = text[:maxLen] + "(...)"
-        else:
-            finalText = text
-        return finalText
+    def croppedText(cls, text, maxLen = 50, ellipsis='...'):    
+        finalText = text
+        if text:
+            if len(text) > maxLen:
+                finalText = text[:maxLen] + ellipsis
+        return finalText    
 
     @classmethod
-    def croppedTextCenteredAroundSubstring(cls, substring, text, maxLen = 50):
+    def croppedTextCenteredAroundSubstring(cls, substring, text, maxLen = 50, ellipsis='(...)'):
         # return text centered around substring
         textLen = len(text)
         if text and textLen > maxLen:
@@ -99,10 +100,10 @@ class GSUIUtil:
             
             finalText = ""
             if start > 0:
-                finalText += "(...)"
+                finalText += ellipsis
             finalText += text[start:end+1]
             if end < lastIndex:
-                finalText += "(...)"
+                finalText += ellipsis
         else:
             finalText = text
         return finalText
