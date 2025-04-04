@@ -13,7 +13,7 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
 # Features
 - Searches text or presets into multiple packages/folders/graphs/functions from a user-defined search root. The list of possible search roots can be refreshed if items have been added/removed in the Explorer view.
 
-- Persistent search filters enabling to search into the following fields:
+- Search associated to persistent filters performed into the following items:
   - graph name (ID or label)
   - Folder name (ID)
   - Comments and frames
@@ -21,6 +21,7 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
   - Package function input parameter names (ID)
   - Variables or input parameters in function Get nodes (including Package function)
   - Variables or input parameters in function Set nodes (including Package function)
+  - Node ID
 	
   These search capabilities, in particular the ability to find variable Get/Set usage into package functions are especially useful when developing function code as cooking errors currently do not identify the package function in which an error is present. If the error is related to a variable, the search tool enables to quickly find it.
 
