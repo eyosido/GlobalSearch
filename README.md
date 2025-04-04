@@ -5,7 +5,8 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
 
 # Example use cases
 - Search for terms in frames or comments, input parameters, variable names, graph names, function names etc.
-- Determine which graph parameters have custom functions.
+- Find graph or function nodes by type.
+- Determine which graph parameters have parameter functions.
 - Find specific variables into functions including package functions, in particular when involved in cooking errors.
 - Determine which areas are left to be worked on or temporary and need to be removed before production using TODO and TMP markers.
 - Find places where specific variables are being assigned (Set) in functions.
@@ -29,18 +30,16 @@ Substance 3D Designer plugin extending the search capabilities to multiple packa
   - Param functions: searches all graph input parameters to which are assigned custom parameter functions. In a large graph, it is easy to loose track of the input parameters having custom functions, this preset lets you identify them.
   - TODO: searches for TODO strings that can be left in comments to indicate a feature left to implement. This way you can easily manage a TODO list of what's left to do in your graphs.
   - TMP: searches for TMP strings that can be left in comments to indicate a temporary feature that needs to be removed before final release.
-
-- Two search modes: Natural searches for text contained into the items determined by search filters. If not using Natural mode, search is made for exact match, in this case the * wildcard character may be used at the beginning or end of the search text find items by prefix or suffix. Search can be made case sensitive or not.
-
+- Search is made within words or for exact words (Whole Word option) with optional wildcards.
 - Search results presented as hierarchical (Tree) or flat (List) view. In List mode, search results can be sorted by column.
-
-- Found nodes may be opened into the Graph View using the "Show in Graph View" context menu (Designer 14 and above only).
-
+- Search results (graphs, nodes) may be opened into the Graph View using context menu or double-click (Designer 14 and above only, with limitations due to the Designer API).
+- In addition to terms, specific nodes may be searched by type, including graph atomic nodes, library nodes and function nodes. Node type filters may also be used to tailor term searching to specific nodes.
+- Searches can be made recursively into user graphs and package functions.
 - Found graphs, folders and functions may be shown in the Explorer View using the "Show in Explorer" context menu (Designer 14 and above only).
-
 - Persistent Search history keeping the last searches having returned results. Search History can be cleaned in Preferences.
-
 - Navigation previous/next successful searches with arrow buttons.
+- Navigtation through search results with optional opening of the results into the Graph View.
+- Search results may be saved into a JSON file.
 
 # Requirements
 Substance 3D Designer 12.1.1 to 14.x (and potentially above).
@@ -60,8 +59,6 @@ If upgrading from a previous version of the plugin, the latter must first be del
 Then, launch Substance 3D Designer to install the new version of the plugin as mentioned above.
 
 # Usage
-After a package (.sbs) is opened into Designer, the Refresh button (to the right of the Search Into field) must be clicked so the plugin can refresh its list of content to search into.
-
 Use the Search Into field to reduce the search scope to a specific set of components (graphs, package functions etc.).
 
 To perform a search, enter some text in the search field then hit Enter or the Search button (magnifying glass icon). 
@@ -79,10 +76,9 @@ Documentation comprises this file as well as content of the [doc folder](https:/
 # Known issues / limitations
 As of latest release:
 - Supports only Substance Graphs (texturing graphs).
-- Tree view node expand/collapse in the Search Into combo box/tree may occasionnaly stop working. If this happens, click the Refresh button to the right of the Search Into combo box.
 - When unloading the plugin, the Windows menu still contains the mention of the GlobalSearch window even though it does not exist anymore. When re-enabling the plugin after disabling it, its window does not appear automatically, use the Windows/GlobalSearch menu to show it.
-- Items withing FX-Map, Pixel Processor or Value Processor graphs cannot currently be opened from the Search Result tree (may be a Designer API limitation).
-- The "Search Into" field is not updated when a graph/package is created/loaded/removed due to the lack of notification from the Designer API. The Refresh button updates this field.
+- Items withing FX-Map, Pixel Processor or Value Processor graphs cannot currently be opened from the Search Result tree (Designer API limitation in 14.1.1).
+- The "Search Into" field is not updated when a graph/package is created/loaded/removed due to the lack of notification from the Designer API (in Designer 14.1.1). The Refresh button updates this field.
 
 # Build
 To build the .sdplugin file from source, please follow the [procedure](https://substance3d.adobe.com/documentation/sddoc/packaging-plugins-182257149.html) mentioned in the Substance 3D Designer documentation.
