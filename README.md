@@ -59,6 +59,11 @@ If upgrading from a previous version of the plugin, the latter must first be del
 Then, launch Substance 3D Designer to install the new version of the plugin as mentioned above.
 
 # Usage
+
+A 2-part tutorial video is available:
+Part 1 - Basics: https://youtu.be/kQkOZhNP4wk
+Part 2 - Usage in programming: https://youtu.be/lnhDtAMPz50
+
 Use the Search Into field to reduce the search scope to a specific set of components (graphs, package functions etc.).
 
 To perform a search, enter some text in the search field then hit Enter or the Search button (magnifying glass icon). 
