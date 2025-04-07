@@ -1,6 +1,10 @@
 # Global Search
 Substance 3D Designer plugin extending the search capabilities to multiple packages/folders/graphs/functions at a time using various filters. It is especially useful to locate cooking errors into package functions. Compatible with Substance 3D Designer 12.1.1 to 14.x (and potentially above).
 
+A 2-part tutorial video is available:
+- Part 1 - Basics: [https://youtu.be/kQkOZhNP4wk](https://youtu.be/PWhLia_3wGM)
+- Part 2 - Usage in programming: [https://youtu.be/lnhDtAMPz50](https://youtu.be/oltcISffby0)
+
 ![GlobalSearch_MiniDoc.jpg](https://github.com/eyosido/GlobalSearch/blob/main/doc/GlobalSearch_MiniDoc.png)
 
 # Example use cases
@@ -59,10 +63,9 @@ If upgrading from a previous version of the plugin, the latter must first be del
 Then, launch Substance 3D Designer to install the new version of the plugin as mentioned above.
 
 # Usage
-
 A 2-part tutorial video is available:
-Part 1 - Basics: https://youtu.be/kQkOZhNP4wk
-Part 2 - Usage in programming: https://youtu.be/lnhDtAMPz50
+- Part 1 - Basics: [https://youtu.be/kQkOZhNP4wk](https://youtu.be/PWhLia_3wGM)
+- Part 2 - Usage in programming: [https://youtu.be/lnhDtAMPz50](https://youtu.be/oltcISffby0)
 
 Use the Search Into field to reduce the search scope to a specific set of components (graphs, package functions etc.).
 
